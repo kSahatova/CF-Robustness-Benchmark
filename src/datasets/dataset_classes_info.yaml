@@ -1,0 +1,60 @@
+MedMNIST: {
+  DermaMNIST: {
+    "classes": {
+            0: "actinic keratoses and intraepithelial carcinoma",
+            1: "basal cell carcinoma",
+            2: "benign keratosis-like lesions",
+            3: "dermatofibroma",
+            4: "melanoma",
+            5: "melanocytic nevi",
+            6: "vascular lesions"
+        },
+  }
+}
+
+
+
+MNIST: {
+  "classes": {
+          0: 0,
+          1: 1,
+          2: 2,
+          3: 3,
+          4: 4,
+          5: 5,
+          6: 6,
+          7: 7,
+          8: 8,
+          9: 9
+      },
+}
+
+FashionMNIST: {
+  classes: {
+    0: "T-shirt/top",
+    1: "Trouser",
+    2: "Pullover",
+    3: "Dress",
+    4: "Coat",
+    5: "Sandal",
+    6: "Shirt",
+    7: "Sneaker",
+    8: "Bag",
+    9: "Ankle boot"
+  }
+}
+
+CIFAR10: {
+  classes: {
+    0: "airplane",
+    1: "automobile",
+    2: "bird",
+    3: "cat",
+    4: "deer",
+    5: "dog",
+    6: "frog",
+    7: "horse",
+    8: "ship",
+    9: "truck"
+  }
+}
