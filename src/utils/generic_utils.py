@@ -114,3 +114,27 @@ def compute_reconstruction_error(dataloader, autoencoder):
 def format_metric(metric):
     """Return a formatted version of a metric, with the confidence interval."""
     return f"{metric.mean():.3f} ± {1.96 * metric.std() / np.sqrt(len(metric)):.3f}"
+
+
+def extract_factual_instances(dataloader, init_class_idx):
+    factuals_list = []
+    labels_list = []
+    for imgs, labels in dataloader:
+        ind = torch.where(labels == init_class_idx)[0]
+        labels_list.append(labels[ind])
+        factuals_list.append(imgs[ind])
+
+    factuals_tensor = torch.concat(factuals_list)
+    labels_tensor = torch.concat(labels_list)
+
+    return factuals_tensor, labels_tensor
+
+
+def filter_tp_instances(factuals, labels, classifier):
+
+    predictions = torch.argmax(classifier(factuals), axis=1)
+    valid_indices = np.where(predictions == labels)[0]
+    factuals_tensor = factuals[valid_indices] 
+    labels_tensor = labels[valid_indices]
+
+    return factuals_tensor, labels_tensor

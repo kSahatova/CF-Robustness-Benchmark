@@ -11,7 +11,7 @@ class DatasetBuilder:
     """Builds the dataset using the provided configuration object"""
 
     def __init__(self, config: EasyDict):
-        self.class_name = config.data.name
+        self.class_name = config.data.class_name
         self.args = config.data
         self.img_size = config.data.img_size
         self.batch_size = config.batch_size
@@ -25,7 +25,7 @@ class DatasetBuilder:
         try:
             dataset_cls = getattr(datasets_api, self.class_name)
             dataset = dataset_cls(
-                ds_name=self.args.flag,
+                ds_name=self.args.name,
                 split=split,
                 data_dir=self.data_dir,
                 img_size=self.img_size,

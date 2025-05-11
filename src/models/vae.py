@@ -86,7 +86,7 @@ class Annealer:
     """
 
     def __init__(
-        self, total_steps, shape="linear", baseline=0.0, cyclical=False, disable=False
+        self, total_steps, shape="linear", baseline=0.0, cyclical=False
     ):
         """
         Parameters:
@@ -94,7 +94,6 @@ class Annealer:
             shape (str): Shape of the annealing function. Can be 'linear', 'cosine', or 'logistic'.
             baseline (float): Starting value for the annealing function [0-1]. Default is 0.0.
             cyclical (bool): Whether to repeat the annealing cycle after total_steps is reached.
-            disable (bool): If true, the __call__ method returns unchanged input (no annealing).
         """
 
         self.current_step = 0
@@ -115,9 +114,6 @@ class Annealer:
             raise ValueError("Argument cyclical must be a boolean.")
         self.cyclical = cyclical
 
-        if type(disable) is not bool:
-            raise ValueError("Argument disable must be a boolean.")
-        self.disable = disable
 
     def __call__(self, kld):
         """
@@ -126,8 +122,6 @@ class Annealer:
         Returns:
             out (torch.tensor): KL divergence loss multiplied by the slope of the annealing function.
         """
-        if self.disable:
-            return kld
         self.weight = self._slope()
         out = kld * self.weight
         return out

@@ -3,8 +3,8 @@ data_dir : "D:/PycharmProjects/CF-Robustness-Benchmark/data"
 
 # configure the dataset 
 data: {
-  name : 'MedMNISTDataset',
-  flag : "dermamnist_corrected_224",
+  name : "dermamnist_corrected_224",
+  class_name : 'MedMNISTDataset',
   classes: ['benign keratosis-like lesions', 'melanoma'],
   num_classes: 2,
   img_size: 224,

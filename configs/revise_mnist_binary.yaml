@@ -1,0 +1,51 @@
+# This is a configuration file that to run REVISE algorithm on the MNIST dataset.
+data_dir : "D:/PycharmProjects/CF-Robustness-Benchmark/data"
+
+# configure the dataset 
+data: {
+  name : "mnist",
+  class_name : 'MNISTDataset',
+  classes: [1, 7],
+  num_classes: 2,
+  img_size: 28,
+  download: True,
+  undersample_flag: False, # if the dataset is unbalanced, set to True to undersample the majority class in binary setting
+  channels_first: True, # if True, the input tensor is in (C, H, W) format, otherwise (H, W, C)
+  increase_channels: False # increase channels to 3 
+}
+
+
+classifier:
+  name: "SimpleCNNtorch" # a class name of the predictive model to use
+  args:
+    input_channels: 1 # number of input channels
+    in_conv_channels: [1, 8, 16] 
+    out_conv_channels: [8, 16, 32]
+    conv_kernels: [7, 5, 3]
+    softmax_flag: True
+  # path to the checkpoints
+  checkpoints_path: "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/mnist_1_7_epoch=00_val_accuracy=0.99.pth"
+
+vae:
+  name: "BetaVAE" # name of the model to use
+  args:
+    latent_dim: 32 # dimension of the latent space
+    hidden_dims: [32, 64, 128] # hidden dimensions for the encoder and decoder
+    input_channels: 1 # number of input channels (1 for grayscale images)
+    beta: 1.0 # weight for the KL divergence term in the loss function
+  checkpoints_path: "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/mnist_vae/binary/checkpoints/mnist_1_7_epoch=14_total_loss=0.00.pth" 
+
+
+revise_hyperparameters:
+  lambda: 0.01
+  optimizer: "Adam"
+  lr: 0.1
+  max_iter: 700
+  target_class_ind: [[0, 1]]
+
+
+batch_size: 64
+num_workers: 1
+accelerator: "cpu"
+devices: 1 # number of devices to use
+save_dir: "D:/PycharmProjects/CF-Robustness-Benchmark/cf_output/mnist/revise_binary"
