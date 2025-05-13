@@ -1,12 +1,13 @@
 # This is a configuration file for training a classifier on the MNIST dataset.
-data_dir : "D:/PycharmProjects/CF-Robustness-Benchmark/data"
+data_dir : "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+# "D:/PycharmProjects/CF-Robustness-Benchmark/data"
 
 # configure the dataset 
 data: {
   name : "mnist",
   class_name : 'MNISTDataset',
-  classes: [1, 7],
-  num_classes: 2,
+  classes: ["all"],
+  num_classes: 10,
   img_size: 28,
   download: True,
   undersample_flag: False, # if the dataset is unbalanced, set to True to undersample the majority class in binary setting

@@ -1,0 +1,53 @@
+# This is a configuration file for training a classifier on the MNIST dataset.
+data_dir : "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+# "D:/PycharmProjects/CF-Robustness-Benchmark/data"
+
+# configure the dataset 
+data: {
+  name : "fmnist",
+  class_name : 'FashionMNISTDataset',
+  classes: [0, 4], 
+  num_classes: 2,
+  img_size: 28,
+  download: True,
+  undersample_flag: False, # if the dataset is unbalanced, set to True to undersample the majority class in binary setting
+  channels_first: True, # if True, the input tensor is in (C, H, W) format, otherwise (H, W, C)
+  increase_channels: False # increase channels to 3 
+}
+
+model: 
+  name: "VAE" # name of the model to use
+  args:
+    latent_dim: 32 # dimension of the latent space
+    hidden_dims: [32, 64, 128] # hidden dimensions for the encoder and decoder
+    input_channels: 1 # number of input channels (1 for grayscale images)
+    beta: 1.0 # weight for the KL divergence term in the loss function
+
+annealer:
+  name: "Annealer" # class name of the annealer to use
+  args:
+    total_steps: 10
+    shape: "logistic"
+    baseline: 0.0 
+    cyclical: True
+
+loss: 
+  name: "BCELoss" # loss function to use
+  args: 
+    reduction: "sum"
+
+optimizer:
+  name: "Adam"
+  args:
+    lr: 0.001
+
+epochs: 35
+batch_size: 64
+num_workers: 1
+accelerator: "cuda"
+devices: 1 # number of devices to use
+save_dir: " "
+checkpoint_path: " " # path to the checkpoint to resume training
+
+
+

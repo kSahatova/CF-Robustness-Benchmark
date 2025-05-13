@@ -4,10 +4,13 @@ import os
 import yaml
 import random
 import numpy as np
-from typing import Any
+from typing import Any, Tuple, List
 from easydict import EasyDict
 
 import torch
+from torch import nn
+from torch import Tensor
+from torch.utils.data import DataLoader
 from torchmetrics import F1Score, Accuracy
 
 import tensorflow as tf
@@ -106,8 +109,6 @@ def compute_reconstruction_error(dataloader, autoencoder):
         # total_error += np.sum(batch_error)
         errors.append(batch_error)
 
-    # total_error /= n_samples
-
     return np.asarray(errors)  # total_error
 
 
@@ -116,13 +117,16 @@ def format_metric(metric):
     return f"{metric.mean():.3f} ± {1.96 * metric.std() / np.sqrt(len(metric)):.3f}"
 
 
-def extract_factual_instances(dataloader, init_class_idx):
+def extract_factual_instances(dataloader: DataLoader, init_class_idx: List[int]) -> Tuple[Tensor, Tensor]:
+    """Extracts factual instances of the provided class index"""
+
     factuals_list = []
     labels_list = []
     for imgs, labels in dataloader:
-        ind = torch.where(labels == init_class_idx)[0]
-        labels_list.append(labels[ind])
-        factuals_list.append(imgs[ind])
+        for class_ind in init_class_idx:
+            ind = torch.where(labels == class_ind)[0]
+            labels_list.append(labels[ind])
+            factuals_list.append(imgs[ind])
 
     factuals_tensor = torch.concat(factuals_list)
     labels_tensor = torch.concat(labels_list)
@@ -130,9 +134,11 @@ def extract_factual_instances(dataloader, init_class_idx):
     return factuals_tensor, labels_tensor
 
 
-def filter_tp_instances(factuals, labels, classifier):
+def filter_valid_factuals(factuals: Tensor, labels: Tensor, classifier: nn.Module, device: str="cpu") -> Tuple[Tensor, Tensor]:
+    """Filters out instances that are invalidated by the given classifier"""
 
-    predictions = torch.argmax(classifier(factuals), axis=1)
+    classifier = classifier.to(device)
+    predictions = torch.argmax(classifier(factuals.to(device)), axis=1).detach().cpu()
     valid_indices = np.where(predictions == labels)[0]
     factuals_tensor = factuals[valid_indices] 
     labels_tensor = labels[valid_indices]

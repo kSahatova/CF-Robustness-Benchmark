@@ -1,5 +1,5 @@
 # This is a configuration file that to run REVISE algorithm on the MNIST dataset.
-data_dir : "D:/PycharmProjects/CF-Robustness-Benchmark/data"
+data_dir : "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
 
 # configure the dataset 
 data: {
@@ -24,7 +24,8 @@ classifier:
     conv_kernels: [7, 5, 3]
     softmax_flag: True
   # path to the checkpoints
-  checkpoints_path: "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/mnist_1_7_epoch=00_val_accuracy=0.99.pth"
+  checkpoints_path: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/mnist_1_7_epoch=00_val_accuracy=0.99.pth"
+  # "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/mnist_1_7_epoch=00_val_accuracy=0.99.pth"
 
 vae:
   name: "BetaVAE" # name of the model to use
@@ -33,7 +34,9 @@ vae:
     hidden_dims: [32, 64, 128] # hidden dimensions for the encoder and decoder
     input_channels: 1 # number of input channels (1 for grayscale images)
     beta: 1.0 # weight for the KL divergence term in the loss function
-  checkpoints_path: "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/mnist_vae/binary/checkpoints/mnist_1_7_epoch=14_total_loss=0.00.pth" 
+  checkpoints_path:  "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_vae/binary/checkpoints/mnist_1_7_epoch=14_total_loss=0.00.pth"
+  # VAE multiclass # "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_vae/multiclass/checkpoints/mnist__epoch=05_total_loss=0.00.pth"
+  # "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/mnist_vae/binary/checkpoints/mnist_1_7_epoch=14_total_loss=0.00.pth" 
 
 
 revise_hyperparameters:
@@ -46,6 +49,7 @@ revise_hyperparameters:
 
 batch_size: 64
 num_workers: 1
-accelerator: "cpu"
+accelerator: "cuda"
 devices: 1 # number of devices to use
-save_dir: "D:/PycharmProjects/CF-Robustness-Benchmark/cf_output/mnist/revise_binary"
+save_dir: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/cf_output/mnist/revise_binary"
+# "D:/PycharmProjects/CF-Robustness-Benchmark/cf_output/mnist/revise_binary"

@@ -2,7 +2,8 @@ from .generic_utils import seed_everything, seed_basic, seed_tf, seed_torch
 from .generic_utils import load_model_weights
 from .generic_utils import evaluate_classification_model
 from .generic_utils import compute_reconstruction_error, format_metric
-from .generic_utils import get_config
+from .generic_utils import get_config, extract_factual_instances, filter_valid_factuals
+from .visualization import plot_boxplot
 
 
 __all__ = [
@@ -14,5 +15,8 @@ __all__ = [
     "evaluate_classification_model",
     "compute_reconstruction_error",
     "format_metric",
-    "get_config"
+    "get_config",
+    "plot_boxplot",
+    "extract_factual_instances",
+    "filter_valid_factuals"
 ]

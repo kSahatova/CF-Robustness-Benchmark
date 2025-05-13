@@ -1,11 +1,12 @@
 # This is a configuration file for training a classifier on the dermamnist_corrected_224 dataset.
-data_dir : "D:/PycharmProjects/CF-Robustness-Benchmark/data"
+data_dir : "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+#"D:/PycharmProjects/CF-Robustness-Benchmark/data"
 
 # configure the dataset 
 data: {
-  name : "fashionmnist",
+  name : "fmnist",
   class_name : 'FashionMNISTDataset',
-  classes: [],
+  classes: [0, 4], #"T-shirt/top", "Coat"
   num_classes: 2,
   img_size: 28,
   download: True,
@@ -14,9 +15,16 @@ data: {
   increase_channels: False # increase channels to 3 
 }
 
-input_channels: 1 # number of input channels
-epochs: 10
-batch_size: 64
+classifier:
+  name: "SimpleCNNtorch" # a class name of the predictive model to use
+  args:
+    input_channels: 1 # number of input channels
+    in_conv_channels: [1, 8, 16] 
+    out_conv_channels: [8, 16, 32]
+    conv_kernels: [7, 5, 3]
+    softmax_flag: True
+  # path to the checkpoints
+  checkpoints_path: ""
 
 loss: 
   name: "CrossEntropyLoss" # loss function to use
@@ -28,6 +36,8 @@ optimizer:
     lr: 0.001
     weight_decay: 0.0001
 
+epochs: 10
+batch_size: 64
 num_workers: 1
 accelerator: "cpu"
 devices: 1 # number of devices to use
