@@ -56,7 +56,7 @@ def get_config(config_path: str):
 
 
 def load_model_weights(
-    model: Any, framework: str = "torch", weights_path: str = "", **kwargs
+    model: Any, framework: str = "torch", weights_path: str = "", lightning_used: bool =False, **kwargs
 ):
     """Load pytorch model from the given weights path"""
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -67,8 +67,9 @@ def load_model_weights(
                     weights_path, weights_only=False,
                     map_location=torch.device(device)
                 )
-            
-            model.load_state_dict(checkpoint["state_dict"])
+            if lightning_used:
+                checkpoint = checkpoint["state_dict"] 
+            model.load_state_dict(checkpoint)
 
         elif framework == "tf":
             # raise NotImplementedError("Check validity of the loading function here")

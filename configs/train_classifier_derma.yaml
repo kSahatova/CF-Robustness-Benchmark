@@ -1,5 +1,6 @@
 # This is a configuration file for training a classifier on the dermamnist_corrected_224 dataset.
-data_dir : "D:/PycharmProjects/CF-Robustness-Benchmark/data"
+data_dir : "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+# "D:/PycharmProjects/CF-Robustness-Benchmark/data"
 
 # configure the dataset 
 data: {
@@ -14,18 +15,41 @@ data: {
   increase_channels: False # increase channels to 3 
 }
 
+classifier:
+  name: "SimpleCNNtorch" # a class name of the predictive model to use
+  args:
+    input_channels: 3 # number of input channels
+    in_conv_channels: [3, 8, 16, 32] 
+    out_conv_channels: [8, 16, 32, 64]
+    conv_kernels: [7, 5, 5, 3]
+    softmax_flag: True
+  # path to the checkpoints
+  checkpoints_path: ""
+  
+loss: 
+  name: "CrossEntropyLoss" # loss function to use
+  args: {}
 
-input_channels: 3
-epochs: 10
+optimizer:
+  name: "Adam"
+  args:
+    lr: 0.0001
+    weight_decay: 0.0
+
+lr_scheduler:
+  name: "ReduceLROnPlateau"
+  enable: True
+  args: 
+    factor: 0.1
+    patience: 3
+
+
+epochs: 30
 batch_size: 32
-learning_rate: 0.001
-weight_decay: 0.0001
 num_workers: 1
-accelerator: "cpu"
+accelerator: "cuda"
 devices: 1 # number of devices to use
-save_dir: " "
+save_dir: "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments"
 checkpoint_path: " " # path to the checkpoint to resume training
-loss_fn: CrossEntropyLoss # loss function to use
-optimizer: Adam # optimizer to use
 
 
