@@ -6,12 +6,13 @@ import torch
 import torch.nn as nn
 
 from torch.autograd import Variable
-from src.models.classifiers import build_classifier_torch 
-from src.recourse_methods.coin.utils import posterior2bin
-from src.recourse_methods.coin.discriminator import  ResBlocksDiscriminator
-from src.recourse_methods.coin.generator import ResBlocksEncoder, ResBlocksGenerator
-from src.recourse_methods.coin.losses import loss_hinge_gen, loss_hinge_dis, kl_divergence, CARL, tv_loss
-from src.recourse_methods.coin.utils import grad_norm
+from src.models.classifiers import build_resnet50 
+from src.utils import load_model_weights
+from src.cf_methods.coin.utils import posterior2bin
+from src.cf_methods.coin.discriminator import  ResBlocksDiscriminator
+from src.cf_methods.coin.generator import ResBlocksEncoder, ResBlocksGenerator
+from src.cf_methods.coin.losses import loss_hinge_gen, loss_hinge_dis, kl_divergence, CARL, tv_loss
+from src.cf_methods.coin.utils import grad_norm
 
 FloatTensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if torch.cuda.is_available() else torch.LongTensor
@@ -34,8 +35,9 @@ class CounterfactualCGAN(nn.Module):
         self.disc = ResBlocksDiscriminator(self.num_bins, opt.in_channels, **opt.get('disc_params', {}))
 
         # black box classifier
-        self.n_classes = opt.n_classes
-        self.classifier_f = build_classifier_torch(opt.n_classes, restore_ckpt=opt.classifier_ckpt)
+        self.n_classes = opt.data.num_classes
+        self.classifier_f = build_resnet50(opt.data.num_classes) 
+        load_model_weights(self.classifier_f, weights_path=opt.classifier_ckpt)
         self.classifier_f.eval()
 
         # Loss functions

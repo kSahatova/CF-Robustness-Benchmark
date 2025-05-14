@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.recourse_methods.coin.blocks import snlinear
-from src.recourse_methods.coin.blocks.discriminator_resblock import DiscriminatorResBlock
+from src.cf_methods.coin.blocks import snlinear
+from src.cf_methods.coin.blocks.discriminator_resblock import DiscriminatorResBlock
 
 
 class Discriminator(nn.Module):

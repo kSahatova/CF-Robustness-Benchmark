@@ -1,11 +1,11 @@
 import os 
 import torch
+import datetime
 import numpy as np
+from pathlib import Path
 from torch.autograd import Variable
 from typing import Union, Dict, List
 from collections import defaultdict
-import datetime
-from pathlib import Path
 
 FloatTensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if torch.cuda.is_available() else torch.LongTensor

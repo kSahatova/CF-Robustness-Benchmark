@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from src.recourse_methods.coin.blocks import encoder_resblock
-from src.recourse_methods.coin.blocks import generator_resblock as gen_resblock
+from src.cf_methods.coin.blocks import encoder_resblock
+from src.cf_methods.coin.blocks import generator_resblock as gen_resblock
 
 class Generator(nn.Module):
     def __init__(self, n_classes, img_shape, latent_dim=100):
