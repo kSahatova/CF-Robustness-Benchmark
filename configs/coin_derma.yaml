@@ -1,0 +1,66 @@
+experiment_name: 'coin_cfe'
+
+# configure the dataset 
+data: {
+  name : "dermamnist_corrected_224",
+  class_name : 'MedMNISTDataset',
+  classes: ['benign keratosis-like lesions', 'melanoma'],
+  num_classes: 2,
+  img_size: 224,
+  download: True,
+  undersample_flag: False, # if the dataset is unbalanced, set to True to undersample the majority class in binary setting
+  channels_first: True, # if True, the input tensor is in (C, H, W) format, otherwise (H, W, C)
+  increase_channels: False # increase channels to 3 
+}
+
+data_dir : "D:/PycharmProjects/CF-Robustness-Benchmark/data"
+# "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+classifier_ckpt: 'D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=08_train_accuracy=0.97.pth'
+#'/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=08_train_accuracy=0.97.pth'
+logging_dir: 'D:/PycharmProjects/CF-Robustness-Benchmark/cf_output/derma'
+
+explain_class_idx: 1
+num_bins: 2 # number of bins for discritization of the classifier's predictions
+in_channels: 3
+
+# Encoder's parameters
+enc_params: 
+  downsample_scales: [2, 2, 2]
+  out_channels: [64, 128, 256]
+  use_snconv: false
+
+# Generator's parameters
+gen_params: 
+  upsample_scales: [2, 2, 2]
+  out_channels: [256, 128, 64]
+  upsample_kind: bilinear
+  use_snconv: false
+  # indices are specifided w.r.t bottleneck (index=0) and upwards
+  skip_conn: [1, 2, 3, 4]
+
+gen_update_freq: 1
+
+# Discriminator's parameters
+disc_params:
+  downsample_scales: [2, 2, 1]
+  out_channels: [64, 128, 256]
+
+# Optimizers' parameters
+lr: 0.0002
+b1: 0.0
+b2: 0.999
+
+# Loss functions' hyperparameters
+adv_loss: 'mse'
+rec_kind: 'l1'
+lambda_adv: 1.0
+lambda_kl: 1.0
+lambda_rec: 1.0
+lambda_minc: 1.0
+
+eps: 1.0e-8
+batch_size: 16
+n_epochs: 10
+sample_interval: 50
+seed: 2025
+

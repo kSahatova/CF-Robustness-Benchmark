@@ -8,6 +8,7 @@ from typing import List
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torchvision.models import resnet50
 
 import tensorflow as tf
 from tensorflow import keras
@@ -184,3 +185,10 @@ class SimpleCNNtorch(nn.Module):
             p.numel() for p in clf_params if p.requires_grad
         )
         return total_params
+
+def build_resnet50(num_classes):
+    """Builds an object of the ResNet50 class with the pretrained weights"""
+    cnn = resnet50(weights='DEFAULT')
+    cnn.fc =  torch.nn.Linear(cnn.fc.in_features, num_classes)
+    return cnn
+
