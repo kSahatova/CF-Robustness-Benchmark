@@ -4,6 +4,8 @@ from functools import partial
 
 import torch
 import torch.nn as nn
+from torch.profiler import record_function
+
 
 from torch.autograd import Variable
 from src.models.classifiers import build_resnet50 
@@ -137,6 +139,15 @@ class CounterfactualCGAN(nn.Module):
     def forward(self, batch, training=False, validation=False, compute_norms=False, global_step=None):
         assert training and not validation or validation and not training
 
+        # with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU,
+        #                                         torch.profiler.ProfilerActivity.CUDA,],
+        #                             schedule=torch.profiler.schedule(wait=0, warmup=0, active=6, repeat=1),
+        #                             record_shapes=True,
+        #                             profile_memory=True,
+        #                             with_stack=True,
+        #                             ) as prof:
+
+            # prof.step()
         # imgs are in [-1, 1] range
         imgs, labels = batch   #['image'], batch['label'], batch['masks']
         imgs = imgs.to(imgs).to(self.device)
@@ -153,8 +164,8 @@ class CounterfactualCGAN(nn.Module):
         fake = Variable(FloatTensor(batch_size, 1).fill_(0.0), requires_grad=False).to(self.device)
 
         # Classifier predictions and desired outputs for the explanation function
-        with torch.no_grad():
-            real_f_x, real_f_x_discrete, real_f_x_desired, real_f_x_desired_discrete = self.posterior_prob(real_imgs)
+        # with torch.no_grad():
+        real_f_x, real_f_x_discrete, real_f_x_desired, real_f_x_desired_discrete = self.posterior_prob(real_imgs)
 
         # -----------------
         #  Train Generator
@@ -164,8 +175,10 @@ class CounterfactualCGAN(nn.Module):
 
         # `real_imgs` and `gen_imgs` are in [-1, 1] range
         # E(x)
+        
         z = self.enc(real_imgs)
         # G(z, c) = I_f(x, c)
+        # with record_function("##gen_forward##"):
         gen_imgs = self.gen(z, real_f_x_desired_discrete, x=real_imgs if self.ptb_based else None)
 
         update_generator = global_step is not None and global_step % self.gen_update_freq == 0
@@ -195,6 +208,7 @@ class CounterfactualCGAN(nn.Module):
             g_loss = g_adv_loss + g_kl + g_rec_loss
 
             # update generator
+            # with record_function("##gen_backward##"):
             if update_generator:
                 self.fabric.backward(g_loss)
                 if compute_norms:
@@ -212,7 +226,8 @@ class CounterfactualCGAN(nn.Module):
         # ---------------------
         if training:
             self.optimizer_D.zero_grad()
-
+        
+        # with record_function("## disc_forward ##"):
         dis_real = self.disc(real_imgs, real_f_x_discrete) # changed from real_f_x_desired_discrete to real_f_x_discrete
         dis_fake = self.disc(gen_imgs.detach(), real_f_x_desired_discrete)
 
@@ -225,7 +240,8 @@ class CounterfactualCGAN(nn.Module):
         
         # total discriminator loss
         d_loss = (d_real_loss + d_fake_loss) / 2
-
+        
+        # with record_function("## disc_backward ##"):
         if training:
             self.fabric.backward(d_loss)
             if compute_norms:
@@ -240,8 +256,10 @@ class CounterfactualCGAN(nn.Module):
             'loss': {**self.gen_loss_logs, **self.disc_loss_logs},
             'gen_imgs': gen_imgs,
         }
-        return outs
     
+        # prof.export_memory_timeline(f"/data/leuven/365/vsc36567/CF-Robustness-Benchmark/cf_output/derma/memory_usage_profile.html", device="cuda:0")
+        return outs
+
     def generate_counterfactual(self, real_imgs:torch.Tensor) -> torch.Tensor:
         real_f_x, real_f_x_discrete, real_f_x_desired, real_f_x_desired_discrete = self.posterior_prob(real_imgs)
         gen_cf_c = self.explanation_function(real_imgs, real_f_x_desired_discrete)

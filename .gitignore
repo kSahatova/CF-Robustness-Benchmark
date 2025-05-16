@@ -7,3 +7,4 @@ experiments
 **src.egg-info
 **mlruns
 **experiments
+test_memory_profiling.ipynb

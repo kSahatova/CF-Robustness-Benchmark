@@ -37,7 +37,7 @@ class CounterfactualTrainer(BaseTrainer):
     def restore_state(self):
         latest_ckpt = max(self.ckpt_dir.glob('*.pth'), key=lambda p: int(p.name.replace('.pth', '').split('_')[1]))
         load_ckpt = latest_ckpt if self.ckpt_name is None else (self.ckpt_dir / self.ckpt_name)
-        state = torch.load(load_ckpt)
+        state = torch.load(load_ckpt, weights_only=False)
         self.batches_done = state['step']
         self.current_epoch = state['epoch']
         self.model.load_state_dict(state['model'], strict=True)
