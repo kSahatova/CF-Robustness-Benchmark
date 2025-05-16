@@ -13,11 +13,12 @@ data: {
   increase_channels: False # increase channels to 3 
 }
 
-data_dir : "D:/PycharmProjects/CF-Robustness-Benchmark/data"
-# "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
-classifier_ckpt: 'D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=08_train_accuracy=0.97.pth'
-#'/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=08_train_accuracy=0.97.pth'
-logging_dir: 'D:/PycharmProjects/CF-Robustness-Benchmark/cf_output/derma'
+data_dir :  "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+#"D:/PycharmProjects/CF-Robustness-Benchmark/data"
+classifier_ckpt: '/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=08_train_accuracy=0.97.pth'
+#'D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=08_train_accuracy=0.97.pth'
+logging_dir: '/data/leuven/365/vsc36567/CF-Robustness-Benchmark/cf_output/derma'
+# 'D:/PycharmProjects/CF-Robustness-Benchmark/cf_output/derma'
 
 explain_class_idx: 1
 num_bins: 2 # number of bins for discritization of the classifier's predictions
@@ -25,14 +26,14 @@ in_channels: 3
 
 # Encoder's parameters
 enc_params: 
-  downsample_scales: [2, 2, 2]
-  out_channels: [64, 128, 256]
+  downsample_scales: [2, 2, 2, 2, 2]
+  out_channels: [64, 128, 256, 512, 1024]
   use_snconv: false
 
 # Generator's parameters
 gen_params: 
-  upsample_scales: [2, 2, 2]
-  out_channels: [256, 128, 64]
+  upsample_scales: [2, 2, 2, 2, 2]
+  out_channels: [1024, 512, 256, 128, 64]
   upsample_kind: bilinear
   use_snconv: false
   # indices are specifided w.r.t bottleneck (index=0) and upwards
@@ -42,8 +43,8 @@ gen_update_freq: 1
 
 # Discriminator's parameters
 disc_params:
-  downsample_scales: [2, 2, 1]
-  out_channels: [64, 128, 256]
+  downsample_scales: [2, 2, 2, 2, 1]
+  out_channels: [64, 128, 256, 512, 1024]
 
 # Optimizers' parameters
 lr: 0.0002
@@ -59,8 +60,10 @@ lambda_rec: 1.0
 lambda_minc: 1.0
 
 eps: 1.0e-8
-batch_size: 16
+batch_size: 5
 n_epochs: 10
 sample_interval: 50
 seed: 2025
-
+eval_counter_freq : 1
+checkpoint_freq: 1
+log_visualizations: false

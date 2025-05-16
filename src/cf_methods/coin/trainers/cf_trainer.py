@@ -70,8 +70,8 @@ class CounterfactualTrainer(BaseTrainer):
                         for model_name, norms in self.model.norms.items():
                             self.logger.log(norms, self.batches_done, f'{model_name}_gradients_norm')
         epoch_stats = stats.average()
-        if self.current_epoch % self.opt.eval_counter_freq == 0:
-            epoch_stats.update(self.evaluate_counterfactual(loader, phase='train'))
+        # if self.current_epoch % self.opt.eval_counter_freq == 0:
+        #     epoch_stats.update(self.evaluate_counterfactual(loader, phase='train'))
         self.logger.log(epoch_stats, self.current_epoch, 'train')
         self.logger.info(
             '[Finished training epoch %d/%d] [Epoch D loss: %f] [Epoch G loss: %f]'
@@ -86,15 +86,15 @@ class CounterfactualTrainer(BaseTrainer):
         stats = AvgMeter()
         avg_pos_to_neg_ratio = 0.0
         for i, batch in tqdm(enumerate(loader), desc=f'Validation epoch {self.current_epoch}', leave=False, total=len(loader)):
-            avg_pos_to_neg_ratio += batch['label'].sum() / batch['label'].shape[0]
+            avg_pos_to_neg_ratio += batch[1].sum() / batch[1].shape[0]
             outs = self.model(batch, validation=True)
             stats.update(outs['loss'])
             if i % self.opt.sample_interval == 0 and self.opt.get('vis_gen', True):
                 save_image(outs['gen_imgs'][:16].data, self.vis_dir / ('%d_val_%d.jpg' % (self.batches_done, i)), nrow=4, normalize=True)
         self.logger.info('[Average positives/negatives ratio in batch: %f]' % round(avg_pos_to_neg_ratio.item() / len(loader), 3))
         epoch_stats = stats.average()
-        if self.current_epoch % self.opt.eval_counter_freq == 0:
-            epoch_stats.update(self.evaluate_counterfactual(loader, phase='val'))
+        # if self.current_epoch % self.opt.eval_counter_freq == 0:
+        #     epoch_stats.update(self.evaluate_counterfactual(loader, phase='val'))
         self.logger.log(epoch_stats, self.current_epoch, 'val')
         self.logger.info(
             '[Finished validation epoch %d/%d] [Epoch D loss: %f] [Epoch G loss: %f]'

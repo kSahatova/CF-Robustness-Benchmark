@@ -29,10 +29,11 @@ class CounterfactualCGAN(nn.Module):
         # from the classifier probability for the explanation class using `posterior2bin` function
         self.num_bins = opt.num_bins  # number of bins for explanation
         self.ptb_based = opt.get('ptb_based', False)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         
-        self.enc = ResBlocksEncoder(opt.in_channels, **opt.get('enc_params', {}))
-        self.gen = ResBlocksGenerator(self.num_bins, in_channels=self.enc.out_channels, **opt.get('gen_params', {}))
-        self.disc = ResBlocksDiscriminator(self.num_bins, opt.in_channels, **opt.get('disc_params', {}))
+        self.enc = ResBlocksEncoder(opt.in_channels, **opt.get('enc_params', {})).to(self.device)
+        self.gen = ResBlocksGenerator(self.num_bins, in_channels=self.enc.out_channels, **opt.get('gen_params', {})).to(self.device)
+        self.disc = ResBlocksDiscriminator(self.num_bins, opt.in_channels, **opt.get('disc_params', {})).to(self.device)
 
         # black box classifier
         self.n_classes = opt.data.num_classes
@@ -138,18 +139,18 @@ class CounterfactualCGAN(nn.Module):
 
         # imgs are in [-1, 1] range
         imgs, labels = batch   #['image'], batch['label'], batch['masks']
-        imgs = imgs.to(imgs)
-        labels = labels.to(labels)
+        imgs = imgs.to(imgs).to(self.device)
+        labels = labels.to(labels).to(self.device)
     
         batch_size = imgs.shape[0]
 
         # Configure input
-        real_imgs = Variable(imgs.type(FloatTensor))
+        real_imgs = Variable(imgs.type(FloatTensor)).to(self.device)
         # masks = Variable(masks.type(FloatTensor))
-        labels = Variable(labels.type(LongTensor))
+        labels = Variable(labels.type(LongTensor)).to(self.device)
         # Adversarial ground truths
-        valid = Variable(FloatTensor(batch_size, 1).fill_(1.0), requires_grad=False)
-        fake = Variable(FloatTensor(batch_size, 1).fill_(0.0), requires_grad=False)
+        valid = Variable(FloatTensor(batch_size, 1).fill_(1.0), requires_grad=False).to(self.device)
+        fake = Variable(FloatTensor(batch_size, 1).fill_(0.0), requires_grad=False).to(self.device)
 
         # Classifier predictions and desired outputs for the explanation function
         with torch.no_grad():
