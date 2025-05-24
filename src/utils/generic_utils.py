@@ -48,7 +48,7 @@ def seed_everything(seed=DEFAULT_RANDOM_SEED):
 def get_config(config_path: str):
     """Load the configuration file from the given path."""
     # Load the configuration file
-    with open(config_path, 'r') as f:
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     # Convert the configuration to a dictionary
     config = EasyDict(config)
@@ -56,7 +56,11 @@ def get_config(config_path: str):
 
 
 def load_model_weights(
-    model: Any, framework: str = "torch", weights_path: str = "", lightning_used: bool =False, **kwargs
+    model: Any,
+    framework: str = "torch",
+    weights_path: str = "",
+    lightning_used: bool = False,
+    **kwargs,
 ):
     """Load pytorch model from the given weights path"""
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -64,26 +68,37 @@ def load_model_weights(
     try:
         if framework == "torch":
             checkpoint = torch.load(
-                    weights_path, weights_only=False,
-                    map_location=torch.device(device)
-                )
+                weights_path, weights_only=False, map_location=torch.device(device)
+            )
             if lightning_used:
-                checkpoint = checkpoint["state_dict"] 
+                checkpoint = checkpoint["state_dict"]
             model.load_state_dict(checkpoint)
 
         elif framework == "tf":
             # raise NotImplementedError("Check validity of the loading function here")
             model.load_weights(weights_path)  # kwargs["custom_objects"]
-    
+
     except ValueError as e:
-        print("Only pytorch or tensorflow models can loaded, check 'framework' argument which should be 'torch' or 'tf'. The following error occurred: ", e)
+        print(
+            "Only pytorch or tensorflow models can loaded, check 'framework' argument which should be 'torch' or 'tf'. The following error occurred: ",
+            e,
+        )
     except Exception as e:
         print(f"Error loading model weights: {e}")
 
 
-
-def evaluate_classification_model(model, dataloader, num_classes):
-    calc_metric = Accuracy(task="binary" if num_classes==2 else "multiclass", num_classes=num_classes)
+def evaluate_classification_model(model, dataloader, num_classes) -> None:
+    """Evaluates accuracy of the classification model on the given dataloader.
+    Args:
+        model (nn.Module): The classification model to evaluate.
+        dataloader (DataLoader): The dataloader containing the test dataset.
+        num_classes (int): The number of classes in the dataset.
+    Returns:
+        None
+    """
+    calc_metric = Accuracy(
+        task="binary" if num_classes == 2 else "multiclass", num_classes=num_classes
+    )
 
     metric = 0
     for images, labels in dataloader:
@@ -118,8 +133,15 @@ def format_metric(metric):
     return f"{metric.mean():.3f} ± {1.96 * metric.std() / np.sqrt(len(metric)):.3f}"
 
 
-def extract_factual_instances(dataloader: DataLoader, init_class_idx: List[int]) -> Tuple[Tensor, Tensor]:
-    """Extracts factual instances of the provided class index"""
+def extract_factual_instances(
+    dataloader: DataLoader, init_class_idx: List[int]
+) -> Tuple[Tensor, Tensor]:
+    """Extracts factual instances of the provided class index
+    Args:
+        dataloader (DataLoader): Pytorch DataLoader object containing the dataset
+        init_class_idx (List[int]): List of class indices to extract
+    Returns:
+        Tuple[Tensor, Tensor]: Tuple of tensors containing the factual instances and their corresponding labels"""
 
     factuals_list = []
     labels_list = []
@@ -135,13 +157,23 @@ def extract_factual_instances(dataloader: DataLoader, init_class_idx: List[int])
     return factuals_tensor, labels_tensor
 
 
-def filter_valid_factuals(factuals: Tensor, labels: Tensor, classifier: nn.Module, device: str="cpu") -> Tuple[Tensor, Tensor]:
-    """Filters out instances that are invalidated by the given classifier"""
+def filter_valid_factuals(
+    factuals: Tensor, labels: Tensor, classifier: nn.Module, device: str = "cpu"
+) -> Tuple[Tensor, Tensor]:
+    """Filters out instances that are invalidated by the given classifier
+    Args:
+        factuals (Tensor): Tensor containing the factual instances
+        labels (Tensor): Tensor containing the labels of the factual instances
+        classifier (nn.Module): Classifier model to validate the factual instances
+        device (str): Device to run the classifier on, default is 'cpu'
+    Returns:
+        Tuple[Tensor, Tensor]: Tuple of tensors containing the valid factual instances and their corresponding labels
+    """
 
     classifier = classifier.to(device)
     predictions = torch.argmax(classifier(factuals.to(device)), axis=1).detach().cpu()
     valid_indices = np.where(predictions == labels)[0]
-    factuals_tensor = factuals[valid_indices] 
+    factuals_tensor = factuals[valid_indices]
     labels_tensor = labels[valid_indices]
 
     return factuals_tensor, labels_tensor

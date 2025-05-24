@@ -1,5 +1,6 @@
 # This is a configuration file for training a classifier on the MNIST dataset.
-data_dir : "D:/PycharmProjects/CF-Robustness-Benchmark/data"
+
+data_dir : "data"
 
 # configure the dataset 
 data: {
@@ -43,6 +44,4 @@ accelerator: "cpu"
 devices: 1 # number of devices to use
 save_dir: " "
 checkpoint_path: " " # path to the checkpoint to resume training
-
-
 

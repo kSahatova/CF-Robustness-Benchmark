@@ -1,5 +1,5 @@
 # This is a configuration file for training a classifier on the dermamnist_corrected_224 dataset.
-data_dir : "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+data_dir : "../data"
 #"D:/PycharmProjects/CF-Robustness-Benchmark/data"
 
 # configure the dataset 

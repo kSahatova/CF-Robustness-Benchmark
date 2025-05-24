@@ -5,10 +5,12 @@ import glob
 import torch
 from torch import nn
 from PIL import Image
+from copy import deepcopy
+from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 from src.cf_methods.c3lt.modules import *
-from src.cf_methods.c3lt.models import Generator, Discriminator, Encoder, MnistNet
-from src.models.classifiers import CNNtorch, SimpleCNNtorch
+from src.cf_methods.c3lt.models import Generator, Discriminator, Encoder
+from src.models.classifiers import SimpleCNNtorch
 from src.cf_methods.c3lt.modules import MNISTFeatureExtractor
 
 
@@ -83,6 +85,38 @@ def load_pretrained_classifier(args):
     print("Classifier loaded!")
 
     return model
+
+
+def dataloader_pair(args, dataset, is_train):
+    """
+    Returns dataloaders for a class pair.
+    Args: 
+        args: a set of arguments
+        dataset: dataset to be used
+        is_train: if True, shuffle the data
+    Returns:
+        dataloader_1: dataloader for the class 1
+        dataloader_2: dataloader for the class 2
+    """
+    dataset_1 = deepcopy(dataset)
+    dataset_2 = deepcopy(dataset)
+
+    # extract samples only of class 1
+    idx_1 = dataset_1.data.targets == args.cls_1
+    dataset_1.data.data = dataset_1.data.data[idx_1]
+    dataset_1.data.targets = dataset_1.data.targets[idx_1]
+
+    # extract samples only of class 2
+    idx_2 = dataset_2.data.targets == args.cls_2
+    dataset_2.data.data = dataset_2.data.data[idx_2]
+    dataset_2.data.targets = dataset_2.data.targets[idx_2]
+
+    dataloader_1 = DataLoader(dataset_1, batch_size=args.batch_size,
+                              shuffle=is_train, pin_memory=True, drop_last=False)
+    dataloader_2 = DataLoader(dataset_2, batch_size=args.batch_size,
+                              shuffle=is_train, pin_memory=True, drop_last=False)
+
+    return  dataloader_1, dataloader_2
 
 
 def assert_batch_size_equal(batch_1, batch_2):

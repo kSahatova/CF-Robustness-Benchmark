@@ -1,17 +1,4 @@
 import torch.nn as nn
-import argparse
-import os
-import random
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.nn.parallel
-import torch.backends.cudnn as cudnn
-import torch.optim as optim
-import torch.utils.data
-import torchvision.datasets as dset
-import torchvision.transforms as transforms
-import torchvision.utils as vutils
 
 
 class Encoder(nn.Module):
@@ -148,36 +135,7 @@ class Discriminator(nn.Module):
             output = nn.parallel.data_parallel(self.main, input, range(self.ngpu))
         else:
             output = self.main(input)
-        return output.view(-1, 1).squeeze(1)
+        return output.view(-1, 1).squeeze(1)   
 
 
-class MnistNet(nn.Module):
-    def __init__(self):
-        super(MnistNet, self).__init__()
 
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=5),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
-        )
-
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
-        )
-
-        self.classifier = nn.Sequential(
-            nn.Linear(4 * 4 * 64, 256),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(256, 10),
-        )
-
-    def forward(self, x):
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        x = F.log_softmax(x, dim=1)
-        return x

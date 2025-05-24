@@ -25,16 +25,18 @@ def perturb_sample(input_images, n_samples = 1, noise_magnitude = 0.01):
     return perturbed_images
 
 
-def calculate_sparsity(factual, counterfactual) -> np.ndarray:
+def calculate_sparsity(factuals, counterfactuals) -> np.ndarray:
     """
     Calculates sparsity between original image and counterfactual image
-    factual : Original image of the size (h x w X c) 
-    counterfactual : Counterfactual explanation of the same size (h x w x c) 
+    Args:
+        factuals : Original image of the size (h x w X c) 
+        counterfactuals : Counterfactual explanation of the same size (h x w x c) 
     Returns :
         the sum of squarred errors between the provided inputs
     """
     
-    return np.linalg.norm(factual - counterfactual, ord=1) #sum(abs(factual - counterfcatual))
+    
+    return np.linalg.norm(factuals - counterfactuals, ord=1) #sum(abs(factual - counterfcatual))
 
 
 def calculate_ssim(cf, cf_pert):

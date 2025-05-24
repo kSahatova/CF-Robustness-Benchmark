@@ -1,3 +1,4 @@
+import os
 import torch  
 from torch.autograd import Variable
 
@@ -197,8 +198,9 @@ def calculate_validity(classifier, imgs, target_cls):
     :param target_cls:
     :return:
     """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     with torch.no_grad():
-        target = torch.empty(imgs.shape[0]).fill_(target_cls).long().cuda()
+        target = torch.empty(imgs.shape[0]).fill_(target_cls).long().to(device)
         output = classifier(imgs)
         pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
         validity = pred.eq(target.view_as(pred)).sum().item()

@@ -1,5 +1,5 @@
 # This is a configuration file that to run REVISE algorithm on the MNIST dataset.
-data_dir : "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+data_dir : "../data"
 
 # configure the dataset 
 data: {
