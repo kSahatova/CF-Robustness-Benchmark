@@ -107,14 +107,14 @@ def plot_perturbed_factuals_and_cf(
         if noise_levels and j > 0:
             noise = noise_levels[j-1]
             axs[0, j].set_title("$\\epsilon=$" + str(noise))
-        axs[0, j].axis("off")
+        # axs[0, j].axis("off")
 
         axs[1, j].imshow(cfes[j].squeeze().detach().cpu(), cmap="gray")
-        axs[1, j].axis("off")
-        axs[1, j].set_ylabel("CFE /wo noise")
+        # axs[1, j].axis("off")
+        # axs[1, j].set_ylabel("CFE /wo noise")
         
         if j == 0:
-            axs[0, j].set_ylabel('Factuasl')
+            axs[0, j].set_ylabel('Factuals')
             axs[1, j].set_ylabel('CFEs')
 
     plt.tight_layout()
