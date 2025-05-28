@@ -130,7 +130,7 @@ class CounterfactualCGAN(nn.Module):
         # I_f(I_f(x, c), f(x))
         ifxc_fx = self.explanation_function(
             x=gen_imgs,  # I_f(x, c)
-            f_x_discrete=f_x_discrete,
+            f_x_discrete=f_x_discrete,  
         )
         # L_rec(x, I_f(I_f(x, c), f(x)))
         cyclic_term = rec_fn(real_imgs, ifxc_fx)
@@ -208,7 +208,6 @@ class CounterfactualCGAN(nn.Module):
             g_loss = g_adv_loss + g_kl + g_rec_loss
 
             # update generator
-            # with record_function("##gen_backward##"):
             if update_generator:
                 self.fabric.backward(g_loss)
                 if compute_norms:
@@ -265,6 +264,8 @@ class CounterfactualCGAN(nn.Module):
         gen_cf_c = self.explanation_function(real_imgs, real_f_x_desired_discrete)
         diff = (real_imgs - gen_cf_c).abs()
         return real_f_x_discrete, real_f_x_desired_discrete, gen_cf_c, diff
+
+    
     
 
 

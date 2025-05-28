@@ -20,7 +20,7 @@ classifier_ckpt: '/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/ex
 logging_dir: '/data/leuven/365/vsc36567/CF-Robustness-Benchmark/cf_output/derma'
 # 'D:/PycharmProjects/CF-Robustness-Benchmark/cf_output/derma'
 
-explain_class_idx: 1
+explain_class_idx: 0
 num_bins: 2 # number of bins for discritization of the classifier's predictions
 in_channels: 3
 
@@ -39,7 +39,7 @@ gen_params:
   # indices are specifided w.r.t bottleneck (index=0) and upwards
   skip_conn: [1, 2, 3, 4]
 
-gen_update_freq: 1
+gen_update_freq: 5
 
 # Discriminator's parameters
 disc_params:
@@ -63,7 +63,8 @@ eps: 1.0e-8
 batch_size: 5
 n_epochs: 10
 sample_interval: 50
+precision: '32'
 seed: 2025
-eval_counter_freq : 1
+eval_counter_freq : 2
 checkpoint_freq: 1
 log_visualizations: false

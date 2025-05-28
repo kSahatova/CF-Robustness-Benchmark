@@ -149,3 +149,19 @@ class Logger:
 
     def __del__(self):
         self.writer.flush()
+
+
+def confmat_vis_img(
+    batch_masks_gt:torch.Tensor, 
+    batch_masks_pred:torch.Tensor,
+    normalized:bool=False
+):
+    B, _, H, W = batch_masks_gt.shape
+    tp, fp, fn = _tp_fp_fn(batch_masks_pred.squeeze(1), batch_masks_gt.squeeze(1))
+    vis = torch.zeros((B, H, W, 3)).byte()
+    for i in range(B):
+        vis[i][tp[i]] = torch.tensor((50, 168, 82)).byte().reshape(1, 1, 3)  # green
+        vis[i][fp[i]] = torch.tensor((235, 64, 52)).byte().reshape(1, 1, 3)  # red
+        vis[i][fn[i]] = torch.tensor((207, 207, 31)).byte().reshape(1, 1, 3) # yellow
+    vis = vis.to(batch_masks_gt.device)
+    return vis if not normalized else vis.div(255)
