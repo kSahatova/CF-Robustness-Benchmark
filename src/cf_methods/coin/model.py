@@ -16,6 +16,7 @@ from src.cf_methods.coin.generator import ResBlocksEncoder, ResBlocksGenerator
 from src.cf_methods.coin.losses import loss_hinge_gen, loss_hinge_dis, kl_divergence, CARL, tv_loss
 from src.cf_methods.coin.utils import grad_norm
 
+
 FloatTensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if torch.cuda.is_available() else torch.LongTensor
 
@@ -264,9 +265,6 @@ class CounterfactualCGAN(nn.Module):
         gen_cf_c = self.explanation_function(real_imgs, real_f_x_desired_discrete)
         diff = (real_imgs - gen_cf_c).abs()
         return real_f_x_discrete, real_f_x_desired_discrete, gen_cf_c, diff
-
-    
-    
 
 
 class CounterfactualInpaintingCGAN(CounterfactualCGAN):

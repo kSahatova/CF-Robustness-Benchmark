@@ -15,7 +15,7 @@ data: {
 
 data_dir :  "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
 #"D:/PycharmProjects/CF-Robustness-Benchmark/data"
-classifier_ckpt: '/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=08_train_accuracy=0.97.pth'
+classifier_ckpt: '/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=03_train_accuracy=1.00.pth'
 #'D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=08_train_accuracy=0.97.pth'
 logging_dir: '/data/leuven/365/vsc36567/CF-Robustness-Benchmark/cf_output/derma'
 # 'D:/PycharmProjects/CF-Robustness-Benchmark/cf_output/derma'
@@ -55,9 +55,10 @@ b2: 0.999
 adv_loss: 'mse'
 rec_kind: 'l1'
 lambda_adv: 1.0
-lambda_kl: 1.0
+lambda_kl: 2.0
 lambda_rec: 1.0
 lambda_minc: 1.0
+lambda_tv: 0.05
 
 eps: 1.0e-8
 batch_size: 5
@@ -65,6 +66,6 @@ n_epochs: 10
 sample_interval: 50
 precision: '32'
 seed: 2025
-eval_counter_freq : 2
+eval_counter_freq : 5
 checkpoint_freq: 1
 log_visualizations: false

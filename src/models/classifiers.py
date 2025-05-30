@@ -192,3 +192,70 @@ def build_resnet50(num_classes):
     cnn.fc =  torch.nn.Linear(cnn.fc.in_features, num_classes)
     return cnn
 
+
+class CNNtf(Model):
+    def __init__(self, input_channels, num_classes):
+        super(CNNtf, self).__init__()
+
+        self.input_channels = input_channels
+        self.num_classes = num_classes
+
+        # First conv block
+        self.main = [
+            tl.Conv2D(
+                8,
+                kernel_size=5,
+                strides=1,
+                padding="same",
+                input_shape=(None, None, input_channels),
+            ),
+            # tfl.BatchNormalization(),
+            tl.ReLU(),
+            tl.MaxPool2D(pool_size=2, strides=2),
+            tl.Dropout(0.1),
+            # Second conv block
+            tl.Conv2D(16, kernel_size=5, strides=1, padding="same"),
+            # tfl.BatchNormalization(),
+            tl.ReLU(),
+            tl.MaxPool2D(pool_size=2, strides=2),
+            tl.Dropout(0.1),
+            # Third conv block
+            tl.Conv2D(32, kernel_size=3, strides=1, padding="same"),
+            # tfl.BatchNormalization(),
+            tl.ReLU(),
+            tl.MaxPool2D(pool_size=2, strides=2),
+            tl.Dropout(0.1),
+            tl.Flatten(),
+        ]
+
+        # Classifier layer
+        self.classifier = [tl.Dense(128), tl.Dense(num_classes)]
+
+    def call(self, x):
+        # Forward pass through conv layers
+        for layer in self.main:
+            x = layer(x)
+            # print(x.shape)
+
+        # Classification layer
+        x = self.classifier[0](x)
+        logits = self.classifier[1](x)
+
+        return logits  # , x
+
+    def get_params_num(self):
+        total_params = 0
+
+        # Count trainable parameters in main layers
+        for layer in self.main:
+            total_params += np.sum(
+                [tfk.backend.count_params(w) for w in layer.trainable_weights]
+            )
+
+        # Count trainable parameters in classifier
+        total_params += np.sum(
+            [tfk.backend.count_params(w) for w in self.classifier.trainable_weights]
+        )
+
+        return total_params
+

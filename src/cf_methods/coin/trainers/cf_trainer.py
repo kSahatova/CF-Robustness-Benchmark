@@ -12,7 +12,8 @@ from tqdm import tqdm
 from src.cf_methods.coin.model import CounterfactualCGAN
 from src.cf_methods.coin.utils import AvgMeter, save_model
 from src.cf_methods.coin.trainers import BaseTrainer
-from src.cf_methods.coin.utils import confmat_vis_img
+# from src.cf_methods.coin.utils import confmat_vis_img
+from src.utils import evaluate_classification_model
 
 
 
@@ -32,8 +33,8 @@ class CounterfactualTrainer(BaseTrainer):
         
         self.cf_gt_seg_mask_idx = opt.get('cf_gt_seg_mask_idx', -1)
         self.cf_threshold = opt.get('cf_threshold', 0.25)
-        self.val_iou_xc = BinaryJaccardIndex(self.cf_threshold).to(self.device)
-        self.val_iou_xfx = BinaryJaccardIndex(self.cf_threshold).to(self.device)
+        # self.val_iou_xc = BinaryJaccardIndex(self.cf_threshold).to(self.device)
+        # self.val_iou_xfx = BinaryJaccardIndex(self.cf_threshold).to(self.device)
 
     def restore_state(self):
         latest_ckpt = max(self.ckpt_dir.glob('*.pth'), key=lambda p: int(p.name.replace('.pth', '').split('_')[1]))
@@ -54,6 +55,7 @@ class CounterfactualTrainer(BaseTrainer):
 
         stats = AvgMeter()
         epoch_steps = self.opt.get('epoch_steps')
+
         with tqdm(enumerate(loader), desc=f'Training epoch {self.current_epoch}', leave=False, total=epoch_steps or len(loader)) as prog:
             for i, batch in prog:
                 if i == epoch_steps:
@@ -86,6 +88,7 @@ class CounterfactualTrainer(BaseTrainer):
 
         stats = AvgMeter()
         avg_pos_to_neg_ratio = 0.0
+
         for i, batch in tqdm(enumerate(loader), desc=f'Validation epoch {self.current_epoch}', leave=False, total=len(loader)):
             avg_pos_to_neg_ratio += batch[1].sum() / batch[1].shape[0]
             outs = self.model(batch, validation=True)
@@ -117,9 +120,9 @@ class CounterfactualTrainer(BaseTrainer):
         true_num_abnormal_samples = 0
         for i, batch in tqdm(enumerate(loader), desc='Validating counterfactuals', leave=False, total=len(loader)):
             # Evaluate Counterfactual Validity Metric
-            real_imgs = batch['image'].cuda(non_blocking=True)
+            real_imgs = batch[0].cuda(non_blocking=True)
             # cf_gt_masks = batch['masks'][:, self.cf_gt_seg_mask_idx].cuda(non_blocking=True)
-            labels = batch['label']
+            labels = batch[1]
             true_num_abnormal_samples += labels.sum()
             B = labels.shape[0]
 
