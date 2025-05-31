@@ -45,47 +45,46 @@ def create_convolutional_autoencoder(in_shape=(224, 224, 1)):
     return autoencoder
 
 
-def create_generator(in_shape=(224, 224, 1), residuals=True):
+def create_generator(in_shape=(28, 28, 1), residuals=True):
     """Define and compile the residual generator of the CounteRGAN."""
-
     generator_input = Input(shape=in_shape, name="generator_input")
-    generator = Conv2D(64, (3, 3), strides=(2, 2), padding="valid")(generator_input)
-    generator = LeakyReLU(negative_slope=0.2)(generator)
+    generator = Conv2D(64, (3, 3), strides=(2, 2), padding="same")(generator_input)
+    generator = LeakyReLU(alpha=0.2)(generator)
     generator = Dropout(0.2)(generator)
-    # print(generator.shape)
-
-    generator = Conv2D(64, (3, 3), strides=(2, 2), padding="valid")(generator)
-    generator = LeakyReLU(negative_slope=0.2)(generator)
+    generator = Conv2D(64, (3, 3), strides=(2, 2), padding="same")(generator)
+    generator = LeakyReLU(alpha=0.2)(generator)
     generator = Dropout(0.2)(generator)
-    temp_shape = generator.shape[1:]
-    # print(generator.shape)
-
     generator = Flatten()(generator)
 
     # Deconvolution
-    generator = Dense(np.prod(temp_shape).item())(generator)
-    generator = LeakyReLU(negative_slope=0.2)(generator)
-    generator = Reshape(temp_shape)(generator)
-    # print(generator.shape)
-
+    n_nodes = 128 * 7 * 7  # foundation for 7x7 image
+    generator = Dense(n_nodes)(generator)
+    generator = LeakyReLU(alpha=0.2)(generator)
+    generator = Reshape((7, 7, 128))(generator)
     # upsample to 14x14
-    generator = Conv2DTranspose(64, (3, 3), strides=(2, 2), padding="valid")(generator)
-    generator = LeakyReLU(negative_slope=0.2)(generator)
-    # print(generator.shape)
-
+    generator = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding="same")(generator)
     # upsample to 28x28
-    generator = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding="valid")(generator)
-    generator = LeakyReLU(negative_slope=0.2)(generator)
-    # print(generator.shape)
+    generator = LeakyReLU(alpha=0.2)(generator)
 
-    generator = Conv2D(1, (4, 4), activation="tanh", padding="same")(generator)
-    generator = Reshape(in_shape)(generator)
+    generator = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding="same")(generator)
+    generator = LeakyReLU(alpha=0.2)(generator)
+
+    generator = Conv2D(1, (7, 7), activation="tanh", padding="same")(generator)
+    generator = Reshape((28, 28, 1))(generator)
+    # these are residuals
+
     generator_output = ActivityRegularization(l1=1e-5, l2=0.0)(generator)
+    # print(generator)
+    # print(generator_output)
 
     if residuals:
         generator_output = Add(name="output")([generator_input, generator_output])
 
-    return Model(inputs=generator_input, outputs=generator_output)
+    model = Model(inputs=generator_input, outputs=generator_output)
+    optimizer = optimizers.Adam(learning_rate=0.0002, beta_1=0.5)
+    model.compile(optimizer, loss="binary_crossentropy", metrics=["accuracy"])
+
+    return model
 
 
 def create_discriminator(in_shape=(28, 28, 1)):
@@ -96,13 +95,13 @@ def create_discriminator(in_shape=(28, 28, 1)):
         [
             Conv2D(64, (3, 3), strides=(2, 2), padding="same", input_shape=in_shape),
             GaussianNoise(0.2),
-            LeakyReLU(negative_slope=0.2),
+            LeakyReLU(alpha=0.2),
             Dropout(0.4),
             Conv2D(64, (3, 3), strides=(2, 2), padding="same"),
-            LeakyReLU(negative_slope=0.2),
+            LeakyReLU(alpha=0.2),
             Dropout(0.4),
             Conv2D(64, (3, 3), strides=(2, 2), padding="same"),
-            LeakyReLU(negative_slope=0.2),
+            LeakyReLU(alpha=0.2),
             Dropout(0.4),
             Flatten(),
             Dense(1, activation="sigmoid"),
@@ -128,7 +127,9 @@ def define_countergan(generator, discriminator, classifier, input_shape=(28, 28,
         outputs=[discriminator(x_generated), classifier(x_generated)],
     )
 
-    optimizer = optimizers.RMSprop(learning_rate=4e-4, decay=1e-8)  # Generator optimizer
+    optimizer = optimizers.legacy.RMSprop(
+        learning_rate=4e-4, decay=1e-8
+    )  # Generator optimizer
     countergan.compile(
         optimizer, loss=["binary_crossentropy", "categorical_crossentropy"]
     )

@@ -204,9 +204,9 @@ class CNNtf(Model):
         self.main = [
             tl.Conv2D(
                 8,
-                kernel_size=5,
+                kernel_size=7,
                 strides=1,
-                padding="same",
+                padding="same",  activation='relu',
                 input_shape=(None, None, input_channels),
             ),
             # tfl.BatchNormalization(),
@@ -214,13 +214,13 @@ class CNNtf(Model):
             tl.MaxPool2D(pool_size=2, strides=2),
             tl.Dropout(0.1),
             # Second conv block
-            tl.Conv2D(16, kernel_size=5, strides=1, padding="same"),
+            tl.Conv2D(16, kernel_size=5, strides=1, padding="same", activation='relu'),
             # tfl.BatchNormalization(),
             tl.ReLU(),
             tl.MaxPool2D(pool_size=2, strides=2),
             tl.Dropout(0.1),
             # Third conv block
-            tl.Conv2D(32, kernel_size=3, strides=1, padding="same"),
+            tl.Conv2D(32, kernel_size=3, strides=1, padding="same",  activation='relu'),
             # tfl.BatchNormalization(),
             tl.ReLU(),
             tl.MaxPool2D(pool_size=2, strides=2),
@@ -229,7 +229,7 @@ class CNNtf(Model):
         ]
 
         # Classifier layer
-        self.classifier = [tl.Dense(128), tl.Dense(num_classes)]
+        self.classifier = [tl.Dense(128,  activation='relu'), tl.Dense(num_classes,  activation='softmax')]
 
     def call(self, x):
         # Forward pass through conv layers
