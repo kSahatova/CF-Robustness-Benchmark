@@ -1,0 +1,385 @@
+"""
+This network is build on top of SNGAN network implementation from: https://github.com/MingtaoGuo/sngan_projection_TensorFlow.git
+"""
+import tensorflow as tf
+
+
+
+def upsampling(inputs):
+    H = inputs.shape[1]
+    W = inputs.shape[2]
+    return tf.image.resize(inputs, [H * 2, W * 2])
+
+
+def downsampling(inputs):
+    return tf.nn.avg_pool(inputs, [1, 2, 2, 1], [1, 2, 2, 1], "SAME")
+
+
+def relu(inputs, name=None):
+    return tf.nn.relu(inputs, name=name)
+
+
+def tanh(inputs, name=None):
+    return tf.nn.tanh(inputs, name=name)
+
+
+def sigmoid(inputs, name=None):
+    return tf.nn.sigmoid(inputs, name=name)
+
+
+def softmax(inputs, name=None):
+    return tf.nn.softmax(inputs, name=name)
+
+
+def _l2normalize(v, eps=1e-12):
+    """l2 normize the input vector."""
+    return v / (tf.reduce_sum(v ** 2) ** 0.5 + eps)
+
+
+def global_sum_pooling(inputs):
+    inputs = tf.reduce_sum(inputs, [1, 2], keepdims=False)
+    return inputs
+
+
+def spectral_normalization(name, weights, num_iters=1, update_collection=None,
+                           with_sigma=False):
+    """Performs Spectral Normalization on a weight tensor.
+    Specifically it divides the weight tensor by its largest singular value. This
+    is intended to stabilize GAN training, by making the discriminator satisfy a
+    local 1-Lipschitz constraint.
+    Based on [Spectral Normalization for Generative Adversarial Networks][sn-gan]
+    [sn-gan] https://openreview.net/pdf?id=B1QRgziT-
+    Args:
+    weights: The weight tensor which requires spectral normalization
+    num_iters: Number of SN iterations.
+    update_collection: The update collection for assigning persisted variable u.
+                       If None, the function will update u during the forward
+                       pass. Else if the update_collection equals 'NO_OPS', the
+                       function will not update the u during the forward. This
+                       is useful for the discriminator, since it does not update
+                       u in the second pass.
+                       Else, it will put the assignment in a collection
+                       defined by the user. Then the user need to run the
+                       assignment explicitly.
+    with_sigma: For debugging purpose. If True, the fuction returns
+                the estimated singular value for the weight tensor.
+    Returns:
+    w_bar: The normalized weight tensor
+    sigma: The estimated singular value for the weight tensor.
+    """
+    w_shape = weights.shape.as_list()
+    w_mat = tf.reshape(weights, [-1, w_shape[-1]])  # [-1, output_channel]
+    u = tf.get_variable(name + 'u', [1, w_shape[-1]],
+                        initializer=tf.truncated_normal_initializer(),
+                        trainable=False)
+    u_ = u
+    for _ in range(num_iters):
+        v_ = _l2normalize(tf.matmul(u_, w_mat, transpose_b=True))
+        u_ = _l2normalize(tf.matmul(v_, w_mat))
+
+    sigma = tf.squeeze(tf.matmul(tf.matmul(v_, w_mat), u_, transpose_b=True))
+    w_mat /= sigma
+    if update_collection is None:
+        with tf.control_dependencies([u.assign(u_)]):
+            w_bar = tf.reshape(w_mat, w_shape)
+    else:
+        w_bar = tf.reshape(w_mat, w_shape)
+        if update_collection != 'NO_OPS':
+            tf.add_to_collection(update_collection, u.assign(u_))
+    if with_sigma:
+        return w_bar, sigma
+    else:
+        return w_bar
+
+
+# def conditional_batchnorm(x, scope_bn, y=None, nums_class=None):
+#     # Batch Normalization
+#     # Ioffe S, Szegedy C. Batch normalization: accelerating deep network training by reducing internal covariate shift[J]. 2015:448-456.
+#     # with tf.variable_scope(scope_bn):
+#         if y is None:
+#             beta = tf.get_variable(name=scope_bn + 'beta', shape=[x.shape[-1]],
+#                                    initializer=tf.constant_initializer([0.]), trainable=True)  # label_nums x C
+#             gamma = tf.get_variable(name=scope_bn + 'gamma', shape=[x.shape[-1]],
+#                                     initializer=tf.constant_initializer([1.]), trainable=True)  # label_nums x C
+#         else:
+#             beta = tf.get_variable(name=scope_bn + 'beta', shape=[nums_class, x.shape[-1]],
+#                                    initializer=tf.constant_initializer([0.]), trainable=True)  # label_nums x C
+#             gamma = tf.get_variable(name=scope_bn + 'gamma', shape=[nums_class, x.shape[-1]],
+#                                     initializer=tf.constant_initializer([1.]), trainable=True)  # label_nums x C
+#             beta, gamma = tf.nn.embedding_lookup(beta, y), tf.nn.embedding_lookup(gamma, y)
+#             beta = tf.reshape(beta, [-1, 1, 1, x.shape[-1]])
+#             gamma = tf.reshape(gamma, [-1, 1, 1, x.shape[-1]])
+#         batch_mean, batch_var = tf.nn.moments(x, [0, 1, 2], name='moments', keep_dims=True)
+#         ema = tf.train.ExponentialMovingAverage(decay=0.5)
+
+#         def mean_var_with_update():
+#             ema_apply_op = ema.apply([batch_mean, batch_var])
+#             with tf.control_dependencies([ema_apply_op]):
+#                 return tf.identity(batch_mean), tf.identity(batch_var)
+
+#         mean, var = tf.cond(tf.less(tf.constant(2), tf.constant(5)), mean_var_with_update,
+#                             lambda: (ema.average(batch_mean), ema.average(batch_var)))
+#         normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-3)
+#         return normed
+
+
+def conditional_batchnorm(x, scope_bn, y=None, nums_class=None):
+    # Batch Normalization
+    # Ioffe S, Szegedy C. Batch normalization: accelerating deep network training by reducing internal covariate shift[J]. 2015:448-456.
+    # with tf.variable_scope(scope_bn):
+    input_shape = tf.shape(x)
+    channels = x.shape[-1]
+
+    if y is None:
+        # Standard batch normalization
+        beta = tf.Variable(
+            tf.zeros([channels]), 
+            trainable=True, 
+            name=f'{scope_bn}_beta'
+        )
+        gamma = tf.Variable(
+            tf.ones([channels]), 
+            trainable=True, 
+            name=f'{scope_bn}_gamma'
+        )
+    else:
+        # Conditional batch normalization
+        beta = tf.Variable(
+            tf.zeros([nums_class, channels]), 
+            trainable=True, 
+            name=f'{scope_bn}_beta'
+        )
+        gamma = tf.Variable(
+            tf.ones([nums_class, channels]), 
+            trainable=True, 
+            name=f'{scope_bn}_gamma'
+        )    
+        
+        if y.dtype == tf.float32:
+             y = tf.cast(y, tf.int32)
+        # Lookup parameters for current batch
+        beta = tf.nn.embedding_lookup(beta, y)
+        gamma = tf.nn.embedding_lookup(gamma, y)
+        
+        # Reshape for broadcasting
+        beta = tf.reshape(beta, [-1, 1, 1, channels])
+        gamma = tf.reshape(gamma, [-1, 1, 1, channels])
+    
+    # Calculate batch statistics
+    batch_mean, batch_var = tf.nn.moments(x, [0, 1, 2], keepdims=True)
+    
+    # Create exponential moving average variables
+    ema_mean = tf.Variable(
+        tf.zeros_like(batch_mean), 
+        trainable=False, 
+        name=f'{scope_bn}_ema_mean'
+    )
+    ema_var = tf.Variable(
+        tf.ones_like(batch_var), 
+        trainable=False, 
+        name=f'{scope_bn}_ema_var'
+    )
+
+    decay = 0.5   # EMA decay factor
+    
+    def mean_var_with_update():
+        ema_mean.assign(decay * ema_mean + (1 - decay) * batch_mean)
+        ema_var.assign(decay * ema_var + (1 - decay) * batch_var)
+        
+        return tf.identity(batch_mean), tf.identity(batch_var)
+    
+    # Replicate the original TF1 logic: always update (condition always true)
+    mean, var = mean_var_with_update()
+
+    # TODO: possible issue: update of ema_mean and ema_var even during the inference phase 
+    # Apply batch normalization
+    normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-3)
+    
+    return normed
+
+
+# def conv(name, inputs, nums_out, k_size, strides, update_collection=None, is_sn=False):
+#     nums_in = inputs.shape[-1]
+#     with tf.variable_scope(name):
+#         W = tf.get_variable("W", [k_size, k_size, nums_in, nums_out], initializer=tf.glorot_uniform_initializer())
+#         b = tf.get_variable("b", [nums_out], initializer=tf.constant_initializer([0.0]))
+#         if is_sn:
+#             W = spectral_normalization("sn", W, update_collection=update_collection)
+#         con = tf.nn.conv2d(inputs, W, [1, strides, strides, 1], "SAME")
+#     return tf.nn.bias_add(con, b)
+
+def conv(name, inputs, nums_out, k_size, strides, update_collection=None, is_sn=False):
+
+    # Create the conv layer
+    conv_layer = tf.keras.layers.Conv2D(
+        filters=nums_out,
+        kernel_size=k_size,
+        strides=strides,
+        padding='SAME',
+        kernel_initializer='glorot_uniform',
+        bias_initializer='zeros',
+    )
+
+    if is_sn:
+        conv_layer = tf.keras.layers.SpectralNormalization(conv_layer)
+    outputs = conv_layer(inputs)
+    return outputs
+
+
+# def dense(name, inputs, nums_out, update_collection=None, is_sn=False):
+#     nums_in = inputs.shape[-1]
+#     # with tf.variable_scope(name):
+#     W = tf.get_variable("W", [nums_in, nums_out], initializer=tf.glorot_uniform_initializer())
+#     b = tf.get_variable("b", [nums_out], initializer=tf.constant_initializer([0.0]))
+#     if is_sn:
+#         W = spectral_normalization("sn", W, update_collection=update_collection)
+#     return tf.nn.bias_add(tf.matmul(inputs, W), b)
+
+def dense(name, inputs, nums_out, update_collection=None, is_sn=False):
+    dense_layer = tf.keras.layers.Dense(
+        units=nums_out,
+        kernel_initializer='glorot_uniform',
+        bias_initializer='zeros',
+    )
+    if is_sn:
+        dense_layer = tf.keras.layers.SpectralNormalization(dense_layer)
+    return dense_layer(inputs)
+
+
+# def Inner_product(inputs, y, nums_class, update_collection=None):
+#     W = inputs.shape[-1]
+#     V = tf.get_variable("V", [nums_class, W], initializer=tf.glorot_uniform_initializer())
+#     V = tf.transpose(V)
+#     V = spectral_normalization("embed", V, update_collection=update_collection)
+#     V = tf.transpose(V)
+#     temp = tf.nn.embedding_lookup(V, y)
+#     temp = tf.reduce_sum(temp * inputs, axis=1, keep_dims=True)
+#     return temp
+
+def Inner_product(inputs, y, nums_class):
+    """
+    Functional implementation that creates and applies the layer
+    """
+    W = inputs.shape[-1]
+    
+    with tf.name_scope('inner_product'):
+        # Create the weight matrix
+        V = tf.Variable(
+            tf.keras.initializers.GlorotUniform()(shape=[nums_class, W]),
+            name="V",
+            trainable=True
+        )
+        # Apply spectral normalization if needed
+        # V = tf.keras.layers.SpectralNormalization(V)
+        # V = tf.transpose(V)
+        if y.dtype == tf.float32:
+            y = tf.cast(y, tf.int32)
+        # Embedding lookup and inner product
+        temp = tf.nn.embedding_lookup(V, y)
+        temp = tf.reduce_sum(temp * inputs, axis=1, keepdims=True)
+        
+        return temp
+
+
+def G_Resblock(name, inputs, nums_out, y, nums_class, update_collection=None, is_sn=False):
+    # with tf.variable_scope(name):
+        temp = tf.identity(inputs)
+        inputs = conditional_batchnorm(inputs, "bn1", y, nums_class)
+        inputs = relu(inputs)
+        inputs = upsampling(inputs)
+        # print(name, ' upsample ', inputs)
+        inputs = conv("conv1", inputs, nums_out, 3, 1, update_collection, is_sn=is_sn)
+        inputs = conditional_batchnorm(inputs, "bn2", y, nums_class)
+        inputs = relu(inputs)
+        inputs = conv("conv2", inputs, nums_out, 3, 1, update_collection, is_sn=is_sn)
+        # Identity mapping
+        temp = upsampling(temp)  # upsampling before conv in G
+        temp = conv("identity", temp, nums_out, 1, 1, update_collection, is_sn=is_sn)
+        return inputs + temp
+
+
+def G_Resblock_Encoder(name, inputs, nums_out, y, nums_class, update_collection=None, is_sn=False):
+    # with tf.variable_scope(name):
+        temp = tf.identity(inputs)
+        inputs = conditional_batchnorm(inputs, "bn1", y, nums_class)
+        inputs = relu(inputs)
+        inputs = downsampling(inputs)
+        # print(name, ' down-sample ', inputs)
+        inputs = conv("conv1", inputs, nums_out, 3, 1, update_collection, is_sn=is_sn)
+        inputs = conditional_batchnorm(inputs, "bn2", y, nums_class)
+        inputs = relu(inputs)
+        inputs = conv("conv2", inputs, nums_out, 3, 1, update_collection, is_sn=is_sn)
+        # Identity mapping
+        temp = downsampling(temp)  # downsampling before conv in G
+        temp = conv("identity", temp, nums_out, 1, 1, update_collection, is_sn=is_sn)
+        return inputs + temp
+
+
+def D_Resblock(name, inputs, nums_out, update_collection=None, is_down=True, is_sn=True):
+    # with tf.variable_scope(name):
+        temp = tf.identity(inputs)
+        inputs = relu(inputs)
+        inputs = conv("conv1", inputs, nums_out, 3, 1, update_collection, is_sn=is_sn)
+        inputs = relu(inputs)
+        inputs = conv("conv2", inputs, nums_out, 3, 1, update_collection, is_sn=is_sn)
+        if is_down:
+            inputs = downsampling(inputs)  # downsampling after 2nd conv in D
+            # Identity mapping
+            temp = conv("identity", temp, nums_out, 1, 1, update_collection,
+                        is_sn=is_sn)  # replacing identity mapping with 1x1 conv
+            temp = downsampling(temp)
+        # else:
+        #     temp = conv("identity", temp, nums_out, 1, 1, update_collection, is_sn=True)
+        return inputs + temp
+
+
+def D_FirstResblock(name, inputs, nums_out, update_collection, is_down=True, is_sn=True):
+    # with tf.variable_scope(name):
+        temp = tf.identity(inputs)
+        inputs = conv("conv1", inputs, nums_out, 3, 1, update_collection=update_collection, is_sn=is_sn)
+        inputs = relu(inputs)
+        inputs = conv("conv2", inputs, nums_out, 3, 1, update_collection=update_collection, is_sn=is_sn)
+        if is_down:
+            inputs = downsampling(inputs)
+            # Identity mapping
+            temp = downsampling(temp)
+            temp = conv("identity", temp, nums_out, 1, 1, update_collection=update_collection, is_sn=is_sn)
+        return inputs + temp
+
+
+# CSVAE related blocks
+def Decoder_Block(name, inputs, nums_out):
+    # with tf.variable_scope(name):
+        inputs = upsampling(inputs)
+        # print(name, ' upsample ', inputs)
+        inputs = conv("conv1", inputs, nums_out, 5, 1)
+        inputs = conditional_batchnorm(inputs, "bn1")
+        inputs = relu(inputs)
+        return inputs
+
+
+def Encoder_Block(name, inputs, nums_out):
+    # with tf.variable_scope(name):
+        inputs = downsampling(inputs)
+        # print(name, ' down-sample ', inputs)
+        inputs = conv("conv1", inputs, nums_out, 5, 1)
+        inputs = conditional_batchnorm(inputs, "bn1")
+        inputs = relu(inputs)
+        return inputs
+
+
+def safe_log(inp):
+    EPS = 1e-10
+    return tf.math.log(inp + EPS)
+
+
+def KL(mu1, logvar1, mu2, logvar2):
+    """
+    Calculates the KL divergence between two Gaussians
+    See appendix here for a generalized version of this formula: https://arxiv.org/pdf/1312.6114.pdf
+    """
+    std1 = tf.exp(0.5 * logvar1)
+    std2 = tf.exp(0.5 * logvar2)
+    return tf.reduce_sum(
+        safe_log(std2) - safe_log(std1) + 0.5 * (tf.exp(logvar1) + (mu1 - mu2) ** 2) / tf.exp(logvar2) - 0.5,
+        axis=-1)

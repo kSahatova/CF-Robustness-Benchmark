@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 def generate_fake_samples(x, generator):
     """Use the input generator to generate samples."""
-    return generator.predict(x)
+    return generator.predict(x, verbose=0)
 
 
 def data_stream(x, y=None, batch_size=500):
@@ -36,7 +36,7 @@ def infinite_data_stream(x, y=None, batch_size=500):
             yield next(batches)
 
 
-def plot_generated_images(x, n_plots=5, n_plots_per_row=5, residuals=False):
+def plot_generated_images(x, n_plots=5, n_plots_per_row=5, residuals=False, save_path=''):
     """Plot several images in a grid."""
     x = x.reshape((x.shape[0], 28, 28))
     lower_bound = -1 if residuals else 0
@@ -45,12 +45,13 @@ def plot_generated_images(x, n_plots=5, n_plots_per_row=5, residuals=False):
         ax = plt.subplot(5, n_plots_per_row, 1 + i)
         ax.axis('off')
         ax.imshow(x[i], vmin=lower_bound, vmax=upper_bound, cmap="gray")
+    plt.savefig(save_path)
     plt.show()
 
 
 def compute_reconstruction_error(x, autoencoder):
     """Compute the reconstruction error for a given autoencoder and data points."""
-    preds = autoencoder.predict(x)
+    preds = autoencoder.predict(x, verbose=0)
     preds_flat = preds.reshape((preds.shape[0], -1))
     x_flat = x.reshape((x.shape[0], -1))
     return np.linalg.norm(x_flat - preds_flat, axis=1)
@@ -70,8 +71,8 @@ def compute_metrics(samples, counterfactuals, latencies, classifier, autoencoder
     l1_distances = delta.reshape(delta.shape[0], -1).sum(axis=1)
 
     prediction_gain = (
-        classifier.predict(counterfactuals)[:, desired_class] -
-        classifier.predict(samples)[:, desired_class]
+        classifier.predict(counterfactuals, verbose=0)[:, desired_class] -
+        classifier.predict(samples, verbose=0)[:, desired_class]
     )
 
     metrics = dict()
