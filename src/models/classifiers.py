@@ -204,7 +204,7 @@ class CNNtf(Model):
         self.main = [
             tl.Conv2D(
                 8,
-                kernel_size=7,
+                kernel_size=5,
                 strides=1,
                 padding="same",  activation='relu',
                 input_shape=(None, None, input_channels),

@@ -1,0 +1,70 @@
+###########
+# Discoverer #
+###########
+
+# dataset: 'synthderm'
+data_dir: 'D:\PycharmProjects\CF-Robustness-Benchmark\data'
+data: {
+  name : "dermamnist_corrected_224",
+  class_name : 'MedMNISTDataset',
+  classes: ['benign keratosis-like lesions', 'melanoma'],
+  num_classes: 2,
+  img_size: 224,
+  download: True,
+  undersample_flag: False, # if the dataset is unbalanced, set to True to undersample the majority class in binary setting
+  channels_first: True, # if True, the input tensor is in (C, H, W) format, otherwise (H, W, C)
+  increase_channels: False # increase channels to 3 
+}
+# number of disentangled knobs
+k_dim: 5
+lambda_r: 2.0
+
+classifier_weights: 'D:\PycharmProjects\CF-Robustness-Benchmark\notebooks\experiments\derma_classification\binary\checkpoints\resnet50_derma_acc65.keras' #address where classifier checkpoint is saved
+log_dir: 'D:\PycharmProjects\CF-Robustness-Benchmark\cf_output' #summaries will be saved
+ckpt_dir: ''
+name: 'dermamnist_malignant' #name of the folder at the above address
+
+num_channels: 3
+num_class: 2
+#number of classes in classifier
+num_bins: 2
+#number of bins the output class probability between [0,1] is discretized into.
+factual_class: 0
+target_class: 1
+#the class for which explanation has to be generated
+input_size: 224
+batch_size: 32
+epochs: 300
+
+lambda_GAN: 2
+lambda_cyc: 100
+lambda_cls: 1
+
+discriminate_every_nth: 5
+generate_every_nth: 1
+
+save_summary: 50
+# Save sample images after every how many iterations.
+save_ckpt: 500
+# Save checkpoint after every how many iterations.
+
+ckpt_dir_continue: ''
+
+evaluation_batch_size: 8
+count_to_save: 10
+# number of samples to save while testing
+
+# hyper-parameters for calculating metrics: influential, distinct, realistic
+metrics_batch_size: 32
+metrics_epochs: 10
+metrics_test_ratio: 0.25
+metrics_stability_nx: 5
+metrics_stability_var: 0.01
+# classifier_config: './configs/synthderm_experiments/synthderm_malignant_Classifier.yaml'
+
+
+# hyperparameters for saving results for substitutability metric
+# calc_substitutability: False
+
+# substitutability_attr: 'malignant'
+# substitutability_classifier_config: './output/discoverer/synthderm_experiments/synthderm_malignant_Discoverer_multidim/synthderm_malignant_Classifier_substitutability.yaml'
