@@ -10,8 +10,9 @@ from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 from src.cf_methods.c3lt.modules import *
 from src.cf_methods.c3lt.models import Generator, Discriminator, Encoder
-from src.models.classifiers import SimpleCNNtorch
+from src.models import classifiers
 from src.cf_methods.c3lt.modules import MNISTFeatureExtractor
+from src.utils import load_model_weights
 
 
 def load_pretrained_gan(args):
@@ -71,14 +72,17 @@ def load_pretrained_classifier(args):
     :return:
     """
 
-    model = SimpleCNNtorch(**args.classifier_args).to(args.device) 
+    model_class = getattr(classifiers, args.classifier_name)
+    model = model_class(**args.classifier_args).to(args.device) 
     # MnistNet().to(args.device) 
-    checkpoint = torch.load(
-                    args.cls_path, weights_only=False,
-                    map_location=torch.device(args.device)
-                )
+    # checkpoint = torch.load(
+    #                 args.cls_path, weights_only=False,
+    #                 map_location=torch.device(args.device)
+    #             )
             
-    model.load_state_dict(checkpoint["state_dict"])
+    # model.load_state_dict(checkpoint["state_dict"])
+    load_model_weights(model, weights_path=args.cls_path)
+
     # model.load_state_dict(torch.load(args.cls_path, map_location=args.device)["state_dict"])
     model.requires_grad = False
     model.eval()

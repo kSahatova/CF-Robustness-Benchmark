@@ -18,16 +18,25 @@ data: {
 epochs: 10
 batch_size: 64
 
+# classifier:
+  # name: "SimpleCNNtorch" # a class name of the predictive model to use
+  # args:
+  #   input_channels: 1 # number of input channels
+  #   in_conv_channels: [1, 8, 16] 
+  #   out_conv_channels: [8, 16, 32]
+  #   conv_kernels: [7, 5, 3]
+  #   softmax_flag: True
+  # # path to the checkpoints
+  # checkpoints_path: "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/mnist_1_8_epoch=08_val_loss=0.00.pth"
+
 classifier:
-  name: "SimpleCNNtorch" # a class name of the predictive model to use
+  name: "CNNtorch" # a class name of the predictive model to use
   args:
     input_channels: 1 # number of input channels
-    in_conv_channels: [1, 8, 16] 
-    out_conv_channels: [8, 16, 32]
-    conv_kernels: [7, 5, 3]
+    
     softmax_flag: True
   # path to the checkpoints
-  checkpoints_path: "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/mnist_1_8_epoch=08_val_loss=0.00.pth"
+  checkpoints_path:
 
 loss: 
   name: "CrossEntropyLoss" # loss function to use

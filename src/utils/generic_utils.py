@@ -72,6 +72,8 @@ def load_model_weights(
             )
             if lightning_used:
                 checkpoint = checkpoint["state_dict"]
+                if '' in list(checkpoint.keys()):
+                    del checkpoint['']
             model.load_state_dict(checkpoint)
 
         elif framework == "tf":
@@ -153,6 +155,10 @@ def extract_factual_instances(
 
     factuals_tensor = torch.concat(factuals_list)
     labels_tensor = torch.concat(labels_list)
+
+    indices = torch.randperm(labels_tensor.shape[0])
+    labels_tensor = labels_tensor[indices]
+    factuals_tensor = factuals_tensor[indices]
 
     return factuals_tensor, labels_tensor
 

@@ -41,7 +41,7 @@ class CounterfactualCGAN(nn.Module):
         # black box classifier
         self.n_classes = opt.data.num_classes
         self.classifier_f = build_resnet50(opt.data.num_classes) 
-        load_model_weights(self.classifier_f, weights_path=opt.classifier_ckpt)
+        load_model_weights(self.classifier_f, weights_path=opt.classifier_ckpt, lightning_used=opt.lightning_used)
         self.classifier_f.eval()
 
         # Loss functions
