@@ -52,7 +52,7 @@ def train_c3lt(args, dataloaders):
     for epoch in range(0, args.epochs+1):
 
         total_loss, total_samples = 0, 0
-        for i, ((imgs_1, _), (imgs_2, _)) in enumerate(zip(*dataloader)):
+        for i, ((imgs_1, labels_1), (imgs_2, labels_2)) in enumerate(zip(*dataloader)):
 
             imgs_1 = Variable(imgs_1.type(Tensor), requires_grad=False).to(args.device)
             imgs_2 = Variable(imgs_2.type(Tensor), requires_grad=False).to(args.device)

@@ -15,17 +15,25 @@ data: {
 }
 
 
+# classifier:
+#   name: "SimpleCNNtorch" # a class name of the predictive model to use
+#   args:
+#     input_channels: 1 # number of input channels
+#     in_conv_channels: [1, 8, 16] 
+#     out_conv_channels: [8, 16, 32]
+#     conv_kernels: [7, 5, 3]
+#     softmax_flag: True
+#   # path to the checkpoints
+#   checkpoints_path: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/mnist_1_8_epoch=08_val_accuracy=1.00.pth"
+
+
 classifier:
-  name: "SimpleCNNtorch" # a class name of the predictive model to use
+  name: "CNNtorch" # a class name of the predictive model to use
   args:
     input_channels: 1 # number of input channels
-    in_conv_channels: [1, 8, 16] 
-    out_conv_channels: [8, 16, 32]
-    conv_kernels: [7, 5, 3]
     softmax_flag: True
   # path to the checkpoints
-  checkpoints_path: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/mnist_1_7_epoch=00_val_accuracy=0.99.pth"
-  # "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/mnist_1_7_epoch=00_val_accuracy=0.99.pth"
+  checkpoints_path: '/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/classifier_mnist_1_7.pth'
 
 vae:
   name: "BetaVAE" # name of the model to use
@@ -35,8 +43,8 @@ vae:
     input_channels: 1 # number of input channels (1 for grayscale images)
     beta: 1.0 # weight for the KL divergence term in the loss function
   checkpoints_path:  "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_vae/binary/checkpoints/mnist_1_7_epoch=14_total_loss=0.00.pth"
-  # VAE multiclass # "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_vae/multiclass/checkpoints/mnist__epoch=05_total_loss=0.00.pth"
-  # "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/mnist_vae/binary/checkpoints/mnist_1_7_epoch=14_total_loss=0.00.pth" 
+  # "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_vae/binary/checkpoints/mnist_1_8_epoch=08.pth"
+  # VAE multiclass: # "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_vae/multiclass/checkpoints/mnist__epoch=05_total_loss=0.00.pth"
 
 
 revise_hyperparameters:

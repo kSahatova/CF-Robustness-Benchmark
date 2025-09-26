@@ -56,36 +56,38 @@ class CounterfactualInpaintingTrainer(CounterfactualTrainer):
             cv_y_pred.extend(gen_f_x_discrete.cpu().squeeze(1).numpy())
             posterior_pred.extend(gen_f_x.cpu().squeeze(1).numpy())
 
-            # denorm values from [-1; 1] to [0, 1] range, B x 1 x H x W
-            real_imgs.add_(1).div_(2)
-            gen_cf_c.add_(1).div_(2)
+            # saving cfes only for the first batch
+            if i == 0 :
+                # denorm values from [-1; 1] to [0, 1] range, B x 1 x H x W
+                real_imgs.add_(1).div_(2)
+                gen_cf_c.add_(1).div_(2)
 
-            # compute difference maps, threshold and compute IoU
-            # |x - x_c|
-            diff = (real_imgs - gen_cf_c).abs() # [0; 1] values
-            diff_seg = (diff > self.cf_threshold).byte()
-            # abnormal_mask = labels.bool()
-            # if abnormal_mask.any():
-            #     if postprocess_morph:
-            #         diff_seg[abnormal_mask] = self.postprocess_morph(diff_seg[abnormal_mask])
-            #     pred_num_abnormal_samples += abnormal_mask.sum()
-            #     self.val_iou_xc.update(diff_seg[abnormal_mask].squeeze(1), cf_gt_masks[abnormal_mask])
+                # compute difference maps, threshold and compute IoU
+                # |x - x_c|
+                diff = (real_imgs - gen_cf_c).abs() # [0; 1] values
+                diff_seg = (diff > self.cf_threshold).byte()
+                abnormal_mask = labels.bool()
+                if abnormal_mask.any():
+                    if postprocess_morph:
+                        diff_seg[abnormal_mask] = self.postprocess_morph(diff_seg[abnormal_mask])
+                    pred_num_abnormal_samples += abnormal_mask.sum()
+                    # self.val_iou_xc.update(diff_seg[abnormal_mask].squeeze(1), cf_gt_masks[abnormal_mask])
 
-            # vis_confmat = confmat_vis_img(cf_gt_masks[0].unsqueeze(0).unsqueeze(0), diff_seg[0].unsqueeze(0), normalized=True)[0]
-            # vis = torch.stack((
-            #     real_imgs[0], torch.zeros_like(real_imgs[0]), torch.zeros_like(real_imgs[0]), 
-            #     gen_cf_c[0], diff[0], diff_seg[0],
-            # ), dim=0).permute(0, 2, 3, 1)
-            # vis = torch.cat((vis, vis, vis), 3)
-            # vis[1] = 0.3*vis[0] + 0.7 * vis_confmat
-            # vis[2] = vis_confmat
-            # vis = vis.permute(0, 3, 1, 2)
-            
-            # # save first example for visualization
-            # vis_path = cf_dir / (f'epoch_%d_counterfactual_%d_label_%d_true_%d_pred_%d.png' % (
-            #     self.current_epoch, i, labels[0], real_f_x_desired_discrete[0][0], gen_f_x_discrete[0][0])
-            # )
-            # save_image(vis.data, vis_path, nrow=3, normalize=False) # value_range=(-1, 1))
+                # vis_confmat = confmat_vis_img(cf_gt_masks[0].unsqueeze(0).unsqueeze(0), diff_seg[0].unsqueeze(0), normalized=True)[0]
+                vis = torch.stack((
+                    real_imgs[0], torch.zeros_like(real_imgs[0]), torch.zeros_like(real_imgs[0]), 
+                    gen_cf_c[0], diff[0], diff_seg[0],
+                ), dim=0) #.permute(0, 2, 3, 1)
+                # vis = torch.cat((vis, vis, vis), 3)
+                # vis[1] = 0.3*vis[0] + 0.7 * vis_confmat
+                # vis[2] = vis_confmat
+                #vis = vis.permute(0, 3, 1, 2)
+                
+                # save first example for visualization
+                vis_path = cf_dir / (f'epoch_%d_counterfactual_%d_label_%d_true_%d_pred_%d.png' % (
+                    self.current_epoch, i, labels[0], real_f_x_desired_discrete[0][0], gen_f_x_discrete[0][0])
+                )
+                save_image(vis.data, vis_path, nrow=3, normalize=False) # value_range=(-1, 1))
 
             if not skip_fid:
                 # Evaluate Frechet Inception Distance (FID)
@@ -130,7 +132,7 @@ class CounterfactualInpaintingTrainer(CounterfactualTrainer):
             'counter_acc': cacc,
             f'cv_{int(tau*100)}': cv_score,
             'fid': fid_score,
-            'cf_iou_xc': cf_iou_xc,
+            # 'cf_iou_xc': cf_iou_xc,
         }
     
     def postprocess_morph(self, masks:torch.Tensor):
@@ -162,9 +164,9 @@ class CounterfactualInpaintingV2Trainer(CounterfactualInpaintingTrainer):
         true_num_abnormal_samples = 0
         for i, batch in tqdm(enumerate(loader), desc='Validating counterfactuals', leave=False, total=len(loader)):
             # Evaluate Counterfactual Validity Metric
-            real_imgs = batch['image'].cuda(non_blocking=True)
-            cf_gt_masks = batch['masks'][:, self.cf_gt_seg_mask_idx].cuda(non_blocking=True)
-            labels = batch['label']
+            real_imgs = batch[0].cuda(non_blocking=True)
+            # cf_gt_masks = batch['masks'][:, self.cf_gt_seg_mask_idx].cuda(non_blocking=True)
+            labels = batch[1]
             true_num_abnormal_samples += labels.sum()
             B = labels.shape[0]
 

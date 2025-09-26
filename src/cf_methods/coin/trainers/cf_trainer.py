@@ -33,8 +33,8 @@ class CounterfactualTrainer(BaseTrainer):
         
         self.cf_gt_seg_mask_idx = opt.get('cf_gt_seg_mask_idx', -1)
         self.cf_threshold = opt.get('cf_threshold', 0.25)
-        # self.val_iou_xc = BinaryJaccardIndex(self.cf_threshold).to(self.device)
-        # self.val_iou_xfx = BinaryJaccardIndex(self.cf_threshold).to(self.device)
+        self.val_iou_xc = BinaryJaccardIndex(self.cf_threshold).to(self.device)
+        self.val_iou_xfx = BinaryJaccardIndex(self.cf_threshold).to(self.device)
 
     def restore_state(self):
         latest_ckpt = max(self.ckpt_dir.glob('*.pth'), key=lambda p: int(p.name.replace('.pth', '').split('_')[1]))
@@ -65,7 +65,7 @@ class CounterfactualTrainer(BaseTrainer):
                 outs = self.model(batch, training=True, compute_norms=sample_step and self.compute_norms, global_step=self.batches_done)
                 stats.update(outs['loss'])
                 if sample_step:
-                    if self.opt.get('log_visualizations', True):
+                    if self.opt.get('log_visualizations', True): # log_visualizations is set to False; thus, only val gen images are saved to 'visualizations' folder
                         save_image(outs['gen_imgs'][:16].data, self.vis_dir / ('%d_train_%d.jpg' % (self.current_epoch, i)), nrow=4, normalize=True)
                     postf = '[Batch %d/%d] [D loss: %f] [G loss: %f]' % (i, len(loader), outs['loss']['d_loss'], outs['loss']['g_loss'])
                     prog.set_postfix_str(postf, refresh=True)

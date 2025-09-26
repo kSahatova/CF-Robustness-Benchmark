@@ -1,5 +1,5 @@
 from .model import CounterfactualCGAN, CounterfactualInpaintingCGAN
-from .trainers import CounterfactualTrainer
+from .trainers import CounterfactualTrainer, CounterfactualInpaintingTrainer
 from .discriminator import ResBlocksDiscriminator, Discriminator
 from .generator import ResBlocksGenerator, ResBlocksEncoder, Generator
 from .losses import kl_divergence, loss_hinge_dis, loss_hinge_gen, tv_loss, CARL
@@ -10,6 +10,7 @@ __all__ = [
     "CounterfactualCGAN",
     "CounterfactualInpaintingCGAN",
     "CounterfactualTrainer",
+    "CounterfactualInpaintingTrainer",
     "ResBlocksDiscriminator",
     "Discriminator",
     "ResBlocksGenerator",

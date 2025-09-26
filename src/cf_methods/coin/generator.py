@@ -47,7 +47,7 @@ class ResBlocksEncoder(nn.Module):
         self.out_channels = out_channels
         self.first_block = nn.Sequential(
             # original paper has bn->relu->conv
-            nn.Conv2d(in_channels, 64, kernel_size=3, padding=1, bias=False),
+            nn.Conv2d(in_channels, 64, kernel_size=3, padding=1, stride=1, bias=False),
             nn.ReLU(),
             nn.BatchNorm2d(64),
         )
