@@ -81,7 +81,7 @@ def load_pretrained_classifier(args):
     #             )
             
     # model.load_state_dict(checkpoint["state_dict"])
-    load_model_weights(model, weights_path=args.cls_path)
+    load_model_weights(model, weights_path=args.cls_path, lightning_used=args.cls_lightning_used)
 
     # model.load_state_dict(torch.load(args.cls_path, map_location=args.device)["state_dict"])
     model.requires_grad = False

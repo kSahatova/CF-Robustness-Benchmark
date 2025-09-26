@@ -8,7 +8,7 @@ from torch.profiler import record_function
 
 
 from torch.autograd import Variable
-from src.models.classifiers import build_resnet50 
+# from src.models.classifiers import build_resnet50 
 from src.utils import load_model_weights
 from src.cf_methods.coin.utils import posterior2bin
 from src.cf_methods.coin.discriminator import  ResBlocksDiscriminator
@@ -22,7 +22,7 @@ LongTensor = torch.cuda.LongTensor if torch.cuda.is_available() else torch.LongT
 
 
 class CounterfactualCGAN(nn.Module):
-    def __init__(self, img_size, opt, *args, **kwargs) -> None:
+    def __init__(self, classifier, img_size, opt, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self.opt = opt
@@ -40,9 +40,10 @@ class CounterfactualCGAN(nn.Module):
 
         # black box classifier
         self.n_classes = opt.data.num_classes
-        self.classifier_f = build_resnet50(opt.data.num_classes) 
-        load_model_weights(self.classifier_f, weights_path=opt.classifier_ckpt, lightning_used=opt.lightning_used)
-        self.classifier_f.eval()
+        self.classifier_f = classifier
+        # build_resnet50(opt.data.num_classes) 
+        # load_model_weights(self.classifier_f, weights_path=opt.classifier_ckpt, lightning_used=opt.lightning_used)
+        # self.classifier_f.eval()
 
         # Loss functions
         self.adv_loss = opt.get('adv_loss', 'mse')
@@ -151,7 +152,7 @@ class CounterfactualCGAN(nn.Module):
             # prof.step()
         # imgs are in [-1, 1] range
         imgs, labels = batch   #['image'], batch['label'], batch['masks']
-        imgs = imgs.to(imgs).to(self.device)
+        imgs = imgs.to(imgs).to(self.device)   
         labels = labels.to(labels).to(self.device)
     
         batch_size = imgs.shape[0]
@@ -269,9 +270,10 @@ class CounterfactualCGAN(nn.Module):
 
 class CounterfactualInpaintingCGAN(CounterfactualCGAN):
     
-    def __init__(self, img_size, opt, *args, **kwargs) -> None:
-        super().__init__(img_size, opt, *args, **kwargs)
+    def __init__(self, classifier, img_size, opt, *args, **kwargs) -> None:
+        super().__init__(classifier, img_size, opt, *args, **kwargs)
         self.lambda_tv = opt.get('lambda_tv', 0.0)
+        self.apply_tanh_to_non_gen_imgs = opt.apply_tanh_to_non_gen_imgs 
     
     def posterior_prob(self, x):
         f_x, f_x_discrete, _, _ = super().posterior_prob(x)
@@ -309,6 +311,9 @@ class CounterfactualInpaintingCGAN(CounterfactualCGAN):
         # `real_imgs` and `gen_imgs` are in [-1, 1] range
         imgs, labels = batch  #batch['label'], batch['masks']
         batch_size = imgs.shape[0]
+        if self.img_size == 28:
+            imgs = nn.functional.interpolate(imgs, size=(24, 24), mode='bilinear', align_corners=False)
+
 
         # Configure input
         real_imgs = Variable(imgs.type(FloatTensor))
@@ -335,6 +340,9 @@ class CounterfactualInpaintingCGAN(CounterfactualCGAN):
         z = self.enc(real_imgs)
         # G(z, c) = I_f(x, c)
         gen_imgs = self.gen(z, real_f_x_desired_discrete, x=real_imgs if self.ptb_based else None)
+
+        if self.apply_tanh_to_non_gen_imgs:
+            real_imgs = torch.tanh(real_imgs)
 
         update_generator = global_step is not None and global_step % self.gen_update_freq == 0
         
