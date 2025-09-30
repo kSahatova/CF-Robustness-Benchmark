@@ -130,11 +130,6 @@ def compute_reconstruction_error(dataloader, autoencoder):
     return np.asarray(errors)  # total_error
 
 
-def format_metric(metric):
-    """Return a formatted version of a metric, with the confidence interval."""
-    return f"{metric.mean():.3f} ± {1.96 * metric.std() / np.sqrt(len(metric)):.3f}"
-
-
 def extract_factual_instances(
     dataloader: DataLoader, init_class_idx: List[int]
 ) -> Tuple[Tensor, Tensor]:

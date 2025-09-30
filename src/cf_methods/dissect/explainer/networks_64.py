@@ -24,35 +24,33 @@ def get_embedding_size():
     return [8, 8, 1024]
 
 
-class Generator_Encoder_Decoder(tf.keras.Model):
+class Generator_Encoder_Decoder(tf.keras.Layer):
     def __init__(self, name='GAN'):
-        super(Generator_Encoder_Decoder, self).__init__(name=name)
-        # self.name = name
+        super().__init__()
+        self.name = name
+        self.conv1 = conv("conv1", k_size=3, nums_out=64, strides=1)
+        self.g_resblock1 = G_Resblock_Encoder("Encoder-ResBlock3", inputs, 512, y, nums_class) 
+
 
     def __call__(self, inputs, y, nums_class, num_channel=3):
+
+
+        
         # with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
             # input: [n, 64, 64, 3]
-            # Encoder
-            # print(inputs)
+            
             inputs = relu(conditional_batchnorm(inputs, "BN1"))
-            inputs = conv("conv1", inputs, k_size=3, nums_out=64, strides=1)  # [n, 64, 64, 64]
-            # print(':', inputs)
-            inputs = G_Resblock_Encoder("Encoder-ResBlock3", inputs, 512, y, nums_class)  # [n, 32, 32, 512]
-            # print(':', inputs)
+            inputs = conv("conv1", inputs, k_size=3, nums_out=64, strides=1)  # [n, 64, 64, 64]           
+            inputs = G_Resblock_Encoder("Encoder-ResBlock3", inputs, 512, y, nums_class)  # [n, 32, 32, 512] 
             inputs = G_Resblock_Encoder("Encoder-ResBlock2", inputs, 1024, y, nums_class)  # [n, 16, 16, 1024]
-            # print(':', inputs)
             embedding = G_Resblock_Encoder("Encoder-ResBlock1", inputs, 1024, y, nums_class)  # [n, 8, 8, 1024]
-            # print(':', embedding)
 
             inputs = G_Resblock("ResBlock1", embedding, 1024, y, nums_class)  # [n, 16, 16, 1024]
-            # print(':', inputs)
             inputs = G_Resblock("ResBlock2", inputs, 512, y, nums_class)  # [n, 32, 32, 512]
-            # print(':', inputs)
-            inputs = G_Resblock("ResBlock3", inputs, 256, y, nums_class)  # [n, 64, 64, 256]
-            # print(':', inputs)
+            inputs = G_Resblock("ResBlock3", inputs, 256, y, nums_class)  # [n, 64, 64, 256] 
             inputs = relu(conditional_batchnorm(inputs, "BN"))
             inputs = conv("conv", inputs, k_size=3, nums_out=num_channel, strides=1)  # [n, 64, 64, 3]
-            # print(':', inputs)
+            
             return tf.nn.tanh(inputs), embedding
 
     def var_list(self):

@@ -7,6 +7,39 @@ import tensorflow as tf
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 
+class DataLoader:
+
+    def __init__(self):
+        return
+
+    def load_images_and_labels(self, imgs_names, image_dir, n_class, file_names_dict, num_channel=3,
+                               do_center_crop=False):
+        print("Error! load_images_and_labels should be overwritten in child class")
+        raise NotImplementedError
+    
+
+class ArrayLoader(DataLoader):
+    def __init__(self, images, labels, input_size=64):
+        DataLoader.__init__(self)
+        self.images = images
+        self.labels = labels
+        self.input_size = input_size
+
+    def load_images_and_labels(self, imgs_names, image_dir, n_class, file_names_dict, num_channel=3,
+                               do_center_crop=False):
+        # img_names is the indices of images/labels to be returned
+        del image_dir, n_class, file_names_dict, num_channel, do_center_crop
+        return self.images[imgs_names], self.labels[imgs_names]
+    
+    
+def calc_accuracy(prediction, labels):
+    # even for a binary classification, we have two classes, hence complexity of this
+    acc = tf.reduce_mean(tf.cast(
+        tf.equal(tf.reduce_sum(tf.cast(tf.equal(tf.math.round(prediction), labels), dtype=tf.int32), axis=1),
+                 tf.shape(labels)[1]), tf.float32)) * 100.0
+    return acc
+
+
 def crop_center(img, cropx, cropy):
     y, x, z = img.shape
     startx = x // 2 - (cropx // 2)
@@ -251,3 +284,4 @@ def safe_append(all_arr, curr_arr, axis=0):
     else:
         res = np.append(all_arr, curr_arr, axis=axis)
     return res
+

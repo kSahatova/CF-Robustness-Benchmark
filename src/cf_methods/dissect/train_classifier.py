@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 
 import tensorflow as tf
-from src.models.tf_classifiers import pretrained_classifier 
+from src.models.tf_classifiers import pretrained_classifier
 from src.cf_methods.dissect.utils import ArrayLoader, calc_accuracy
 
 
@@ -14,6 +14,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
 tf.disable_v2_behavior()
+
 
 def train(config_path, overwrite_output_dir=None):
     config = yaml.load(open(config_path))
@@ -23,67 +24,72 @@ def train(config_path, overwrite_output_dir=None):
     if overwrite_output_dir is not None:
         output_dir = overwrite_output_dir
     else:
-        output_dir = os.path.join(config['log_dir'], config['name'])
+        output_dir = os.path.join(config["log_dir"], config["name"])
     try:
         os.makedirs(output_dir)
-        os.makedirs(os.path.join(output_dir, 'logs'))
+        os.makedirs(os.path.join(output_dir, "logs"))
     except:
         pass
     # ============= Experiment Parameters =============
-    BATCH_SIZE = config['batch_size']
-    EPOCHS = config['epochs']
-    channels = config['num_channel']
-    input_size = config['input_size']
-    N_CLASSES = config['num_class']
-    ckpt_dir_continue = config['ckpt_dir_continue']
-    dataset = config['dataset']
+    BATCH_SIZE = config["batch_size"]
+    EPOCHS = config["epochs"]
+    channels = config["num_channel"]
+    input_size = config["input_size"]
+    N_CLASSES = config["num_class"]
+    ckpt_dir_continue = config["ckpt_dir_continue"]
+    dataset = config["dataset"]
 
-    if dataset == 'synthderm':
+    if dataset == "synthderm":
         my_data_loader = ArrayLoader(input_size=64)
-    if ckpt_dir_continue == '':
+    if ckpt_dir_continue == "":
         continue_train = False
     else:
         continue_train = True
 
-    if config['test'] == '':
+    if config["test"] == "":
         evaluate = False
     else:
         evaluate = True
     # ============= Data =============
-    
-    data_train = np.load(config['train'])
-    print('The size of the training set: ', data_train.shape[0])
+
+    data_train = np.load(config["train"])
+    print("The size of the training set: ", data_train.shape[0])
 
     if evaluate:
-        data_test = np.load(config['test'])
-        print('The size of the testing set: ', data_test.shape[0])
-    fp = open(os.path.join(output_dir, 'setting.txt'), 'w')
-    fp.write('config_file:' + str(config_path) + '\n')
+        data_test = np.load(config["test"])
+        print("The size of the testing set: ", data_test.shape[0])
+    fp = open(os.path.join(output_dir, "setting.txt"), "w")
+    fp.write("config_file:" + str(config_path) + "\n")
     fp.close()
 
     # ============= placeholder =============
-    with tf.name_scope('input'):
-        x_ = tf.placeholder(tf.float32, [None, input_size, input_size, channels], name='x-input')
-        y_ = tf.placeholder(tf.int64, [None, N_CLASSES], name='y-input')
+    with tf.name_scope("input"):
+        x_ = tf.placeholder(
+            tf.float32, [None, input_size, input_size, channels], name="x-input"
+        )
+        y_ = tf.placeholder(tf.int64, [None, N_CLASSES], name="y-input")
         isTrain = tf.placeholder(tf.bool)
     # ============= Model =============
     if N_CLASSES == 1:
         y = tf.reshape(y_, [-1])
         y = tf.one_hot(y, 2, on_value=1.0, off_value=0.0, axis=-1)
-        logit, prediction = pretrained_classifier(x_, n_label=2, reuse=False, name='classifier', isTrain=isTrain)
+        logit, prediction = pretrained_classifier(
+            x_, n_label=2, reuse=False, name="classifier", isTrain=isTrain
+        )
     else:
-        logit, prediction = pretrained_classifier(x_, n_label=N_CLASSES, reuse=False, name='classifier',
-                                                  isTrain=isTrain)
+        logit, prediction = pretrained_classifier(
+            x_, n_label=N_CLASSES, reuse=False, name="classifier", isTrain=isTrain
+        )
         y = y_
     classif_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=y, logits=logit)
     classif_acc = calc_accuracy(prediction=prediction, labels=y)
     loss = tf.losses.get_total_loss()
-    # ============= Optimization functions =============    
+    # ============= Optimization functions =============
     train_step = tf.train.AdamOptimizer(0.0001).minimize(loss)
-    # ============= summary =============    
-    cls_loss = tf.summary.scalar('classif_loss', classif_loss)
-    total_loss = tf.summary.scalar('total_loss', loss)
-    cls_acc = tf.summary.scalar('classif_acc', classif_acc)
+    # ============= summary =============
+    cls_loss = tf.summary.scalar("classif_loss", classif_loss)
+    total_loss = tf.summary.scalar("total_loss", loss)
+    cls_acc = tf.summary.scalar("classif_acc", classif_acc)
     sum_train = tf.summary.merge([cls_loss, total_loss, cls_acc])
     # ============= Variables =============
     # Note that this list of variables only include the weights and biases in the model.
@@ -94,9 +100,9 @@ def train(config_path, overwrite_output_dir=None):
     sess = tf.InteractiveSession()
     saver = tf.train.Saver(var_list=lst_vars)
     tf.global_variables_initializer().run()
-    writer = tf.summary.FileWriter(output_dir + '/train', sess.graph)
+    writer = tf.summary.FileWriter(output_dir + "/train", sess.graph)
     if evaluate:
-        writer_test = tf.summary.FileWriter(output_dir + '/test', sess.graph)
+        writer_test = tf.summary.FileWriter(output_dir + "/test", sess.graph)
     # ============= Checkpoints =============
     if continue_train:
         print("Before training, Load checkpoint ")
@@ -123,16 +129,24 @@ def train(config_path, overwrite_output_dir=None):
         num_batch = int(data_train.shape[0] / BATCH_SIZE)
         for i in range(0, num_batch):
             start = i * BATCH_SIZE
-            ns = data_train[start:start + BATCH_SIZE]
-            xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
-                                                           file_names_dict=file_names_dict,
-                                                           num_channel=channels, do_center_crop=True)
-            [_, _loss, summary_str] = sess.run([train_step, loss, sum_train], feed_dict={x_: xs, isTrain: True, y_: ys})
+            ns = data_train[start : start + BATCH_SIZE]
+            # TODO: define file_names_dict
+            xs, ys = my_data_loader.load_images_and_labels(
+                ns,
+                image_dir=config["image_dir"],
+                n_class=N_CLASSES,
+                #    file_names_dict=file_names_dict,
+                num_channel=channels,
+                do_center_crop=True,
+            )
+            [_, _loss, summary_str] = sess.run(
+                [train_step, loss, sum_train], feed_dict={x_: xs, isTrain: True, y_: ys}
+            )
             writer.add_summary(summary_str, itr_train)
             itr_train += 1
             total_loss += _loss
         total_loss /= i
-        print("Epoch: " + str(epoch) + " loss: " + str(total_loss) + '\n')
+        print("Epoch: " + str(epoch) + " loss: " + str(total_loss) + "\n")
         train_loss.append(total_loss)
 
         if evaluate:
@@ -143,30 +157,34 @@ def train(config_path, overwrite_output_dir=None):
             num_batch = int(data_test.shape[0] / BATCH_SIZE)
             for i in range(0, num_batch):
                 start = i * BATCH_SIZE
-                ns = data_test[start:start + BATCH_SIZE]
+                ns = data_test[start : start + BATCH_SIZE]
                 # xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
                 #                                                file_names_dict=file_names_dict,
                 #                                                num_channel=channels, do_center_crop=True)
 
-                
-                [_loss, summary_str] = sess.run([loss, sum_train], feed_dict={x_: xs, isTrain: False, y_: ys})
+                [_loss, summary_str] = sess.run(
+                    [loss, sum_train], feed_dict={x_: xs, isTrain: False, y_: ys}
+                )
                 writer_test.add_summary(summary_str, itr_test)
                 itr_test += 1
                 total_loss += _loss
             total_loss /= i
-            print("Epoch: " + str(epoch) + " Test loss: " + str(total_loss) + '\n')
+            print("Epoch: " + str(epoch) + " Test loss: " + str(total_loss) + "\n")
             test_loss.append(total_loss)
-            np.save(os.path.join(output_dir, 'logs', 'test_loss.npy'), np.asarray(test_loss))
+            np.save(
+                os.path.join(output_dir, "logs", "test_loss.npy"), np.asarray(test_loss)
+            )
 
-        checkpoint_name = os.path.join(output_dir, 'cp1_epoch' + str(epoch) + '.ckpt')
+        checkpoint_name = os.path.join(output_dir, "cp1_epoch" + str(epoch) + ".ckpt")
         save_path = saver.save(sess, checkpoint_name)
-        np.save(os.path.join(output_dir, 'logs', 'train_loss.npy'), np.asarray(train_loss))
+        np.save(
+            os.path.join(output_dir, "logs", "train_loss.npy"), np.asarray(train_loss)
+        )
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', '-c', type=str)
+    parser.add_argument("--config", "-c", type=str)
     args = parser.parse_args()
 
     # ============= Load config =============

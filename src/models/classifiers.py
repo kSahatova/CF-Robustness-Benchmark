@@ -186,10 +186,11 @@ class SimpleCNNtorch(nn.Module):
         )
         return total_params
 
+
 def build_resnet50(num_classes):
     """Builds an object of the ResNet50 class with the pretrained weights"""
-    cnn = resnet50(weights='DEFAULT')
-    cnn.fc =  torch.nn.Linear(cnn.fc.in_features, num_classes)
+    cnn = resnet50(weights="DEFAULT")
+    cnn.fc = torch.nn.Linear(cnn.fc.in_features, num_classes)
     return cnn
 
 
@@ -206,7 +207,8 @@ class CNNtf(Model):
                 8,
                 kernel_size=5,
                 strides=1,
-                padding="same",  activation='relu',
+                padding="same",
+                activation="relu",
                 input_shape=(None, None, input_channels),
             ),
             # tfl.BatchNormalization(),
@@ -214,13 +216,13 @@ class CNNtf(Model):
             tl.MaxPool2D(pool_size=2, strides=2),
             tl.Dropout(0.1),
             # Second conv block
-            tl.Conv2D(16, kernel_size=5, strides=1, padding="same", activation='relu'),
+            tl.Conv2D(16, kernel_size=5, strides=1, padding="same", activation="relu"),
             # tfl.BatchNormalization(),
             tl.ReLU(),
             tl.MaxPool2D(pool_size=2, strides=2),
             tl.Dropout(0.1),
             # Third conv block
-            tl.Conv2D(32, kernel_size=3, strides=1, padding="same",  activation='relu'),
+            tl.Conv2D(32, kernel_size=3, strides=1, padding="same", activation="relu"),
             # tfl.BatchNormalization(),
             tl.ReLU(),
             tl.MaxPool2D(pool_size=2, strides=2),
@@ -229,7 +231,10 @@ class CNNtf(Model):
         ]
 
         # Classifier layer
-        self.classifier = [tl.Dense(128,  activation='relu'), tl.Dense(num_classes,  activation='softmax')]
+        self.classifier = [
+            tl.Dense(128, activation="relu"),
+            tl.Dense(num_classes, activation="softmax"),
+        ]
 
     def call(self, x):
         # Forward pass through conv layers
@@ -259,3 +264,85 @@ class CNNtf(Model):
 
         return total_params
 
+
+class CNNtf_controllable(Model):
+    def __init__(
+        self,
+        input_channels=1,
+        img_size=28,
+        num_classes=2,
+        in_conv_channels=[1, 8, 16, 32, 64],
+        out_conv_channels=[8, 16, 32, 64, 128],
+        conv_kernels=[7, 7, 5, 5, 3],
+        include_pooling=True,
+        softmax_flag=False,
+    ):
+        super(CNNtf_controllable, self).__init__()
+
+        self.num_classes = num_classes
+        self.include_pooling = include_pooling
+        self.softmax_flag = softmax_flag
+
+        self.input_conv_channels = (
+            in_conv_channels
+            if in_conv_channels[0] == input_channels
+            else [input_channels] + in_conv_channels[1:]
+        )
+        self.output_conv_channels = out_conv_channels
+        self.conv_kernels = conv_kernels
+
+        self.main = []
+        self.img_size = img_size
+
+        # Build convolutional layers
+        for i in range(len(self.input_conv_channels)):
+            self.main.append(
+                tl.Conv2D(
+                    filters=self.output_conv_channels[i],
+                    kernel_size=self.conv_kernels[i],
+                    strides=1,
+                    padding="same",
+                    activation="relu",
+                )
+            )
+            if self.include_pooling:
+                self.main.append(tl.MaxPool2D(pool_size=2, strides=2))
+
+                # Update spatial size estimate
+                # current_size = int(np.floor(current_size / 2))
+
+        self.flatten = tl.Flatten()
+
+        # Classifier layers
+        self.classifier = [tl.Dense(128), tl.Dense(num_classes)]
+
+        # self.final_conv_output_dim = current_size
+        # self.final_conv_channels = self.output_conv_channels[-1]
+
+    def call(self, x):
+        for layer in self.main:
+            x = layer(x)
+
+        x = self.flatten(x)
+        # x = self.fc1(x)
+        for layer in self.classifier:
+            x = layer(x)
+        logits = x
+
+        if self.softmax_flag:
+            return tf.nn.log_softmax(logits, axis=1)
+        return logits
+
+    def get_params_num(self):
+        total_params = 0
+        for layer in self.main_layers:
+            total_params += np.sum(
+                [tf.keras.backend.count_params(w) for w in layer.trainable_weights]
+            )
+        total_params += np.sum(
+            [tf.keras.backend.count_params(w) for w in self.fc1.trainable_weights]
+        )
+        total_params += np.sum(
+            [tf.keras.backend.count_params(w) for w in self.fc2.trainable_weights]
+        )
+        return total_params

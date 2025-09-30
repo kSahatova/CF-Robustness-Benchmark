@@ -20,16 +20,16 @@ from explainer.ops import safe_log
 # from explainer.networks_128 import Generator_Encoder_Decoder as Generator_Encoder_Decoder_128
 # from explainer.networks_128 import Discriminator_Contrastive as Discriminator_Contrastive_128
 
-from explainer.networks_64 import Discriminator_Ordinal 
-from explainer.networks_64 import Generator_Encoder_Decoder
-from explainer.networks_64 import Discriminator_Contrastive
+from explainer.networks_64_copy import Discriminator_Ordinal 
+from explainer.networks_64_copy import Generator_Encoder_Decoder
+from explainer.networks_64_copy import Discriminator_Contrastive
 
 from src.utils import get_config
 from src.datasets.dataset_builder import DatasetBuilder
 from src.cf_methods.dissect.utils import save_images, convert_ordinal_to_binary
 from src.cf_methods.dissect.losses import discriminator_loss, generator_loss, l1_loss, contrastive_regularizer_loss
 
-# tf.disable_v2_behavior()
+tf.disable_v2_behavior()
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
