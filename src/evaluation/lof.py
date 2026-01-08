@@ -27,6 +27,6 @@ def estimate_anom_cfe_in_target_class(n_neighbors: int, target_class_ind: List[i
 
     cfes_array = cfes.reshape(cfes.shape[0], -1)
     anomaly_scores = lof.score_samples(cfes_array)
-    anomaly_classes = np.where(anomaly_scores < -1.2, -1, 1)
+    anomaly_classes = np.where(anomaly_scores < -1.1, -1, 1)
 
     return (anomaly_scores, anomaly_classes)  
