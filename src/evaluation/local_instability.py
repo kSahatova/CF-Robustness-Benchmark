@@ -7,30 +7,13 @@ from numpy.random import multivariate_normal, uniform
 from torchmetrics.image import StructuralSimilarityIndexMeasure
 
 
-# def perturb_sample(input_images, n_samples=1, type='uniform', epsilon=0.01):
-#     batch_size, channels, height, width = input_images.shape
-#     input_images = np.tile(input_images, reps=[n_samples, 1, 1, 1])
-
-#     if type == 'normal':
-#         # Define the mean and covariance for the multivariate normal distribution
-#         mean = np.zeros(channels * height * width)  # Zero mean for all pixels
-#         covariance = np.eye(channels * height * width) # Diagonal covariance
-
-#         # Create the MultivariateNormal distribution
-#         noise = multivariate_normal(mean, covariance, size=(batch_size * n_samples,))
-#         noise = noise.reshape(batch_size * n_samples, channels, height, width)
-
-#     elif type == 'uniform':
-#         noise = uniform(-epsilon, epsilon, size=(batch_size, n_samples, channels, height, width))
-
-#     # Perturb the input images with the generated noise
-#     perturbed_images = input_images + noise
-
-#     return perturbed_images
-
-
 def perturb_sample(
-    input_images, n_samples=1, type="uniform", epsilon=None, channels_first=True, std=0.1
+    input_images,
+    n_samples=1,
+    type="uniform",
+    epsilon=None,
+    channels_first=True,
+    std=0.1,
 ):
     """Generate perturbed samples around the input images.
     Args:

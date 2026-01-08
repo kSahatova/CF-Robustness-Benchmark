@@ -5,8 +5,8 @@ setup(
     version="0.1",
     description="An empirical study on robustness evaluation of counterfactual explanations produced by "
     "generative models for image data",
-    author="Kseniya Sahatova",
-    author_email="kseniya.sahatova@kuleuven.be",
+    author="Anonymous",
+    author_email="anon.anonymous@gmail.com",
     packages=[
         "src",
         "src.datasets",
