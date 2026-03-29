@@ -74,13 +74,6 @@ def load_pretrained_classifier(args):
 
     model_class = getattr(classifiers, args.classifier_name)
     model = model_class(**args.classifier_args).to(args.device) 
-    # MnistNet().to(args.device) 
-    # checkpoint = torch.load(
-    #                 args.cls_path, weights_only=False,
-    #                 map_location=torch.device(args.device)
-    #             )
-            
-    # model.load_state_dict(checkpoint["state_dict"])
     load_model_weights(model, weights_path=args.cls_path, lightning_used=args.cls_lightning_used)
 
     # model.load_state_dict(torch.load(args.cls_path, map_location=args.device)["state_dict"])

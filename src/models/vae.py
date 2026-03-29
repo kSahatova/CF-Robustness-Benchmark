@@ -151,6 +151,106 @@ class Annealer:
         return y_out
 
 
+"""class BetaVAE(nn.Module):
+
+    def __init__(
+        self,
+        input_channels: int = 1,
+        hidden_dims: List[int] = [32, 64, 128, 256, 512],
+        latent_dim: int = 128,
+        input_size: Tuple[int, int] = (224, 224),
+        beta: int = 1,
+    ):
+        super().__init__()
+        self.input_channels = input_channels
+        self.hidden_dims = hidden_dims
+        self.latent_dim = latent_dim
+        self.beta = beta
+        self.input_size = input_size
+
+        n_downsample = len(self.hidden_dims)
+        self.feature_size = (
+            self.input_size[0] // (2 ** n_downsample),
+            self.input_size[1] // (2 ** n_downsample),
+        )
+        assert self.feature_size[0] >= 1 and self.feature_size[1] >= 1, (
+            f"Too many downsampling layers ({n_downsample}) for input size {input_size}. "
+            f"Feature map would be {self.feature_size}."
+        )
+        self.flattened_dim = (
+            self.hidden_dims[-1] * self.feature_size[0] * self.feature_size[1]
+        )
+
+        # Build Encoder
+        modules = []
+        in_channels = self.input_channels
+        for h_dim in self.hidden_dims:
+            modules.append(
+                nn.Sequential(
+                    nn.Conv2d(in_channels, h_dim, kernel_size=4, stride=2, padding=1),
+                    nn.BatchNorm2d(h_dim),
+                    nn.ReLU(),
+                )
+            )
+            in_channels = h_dim
+
+        self.encoder_ = nn.Sequential(*modules)
+        self.fc_mu = nn.Linear(self.flattened_dim, self.latent_dim)
+        self.fc_var = nn.Linear(self.flattened_dim, self.latent_dim)
+
+        # Build Decoder
+        self.decoder_input = nn.Linear(self.latent_dim, self.flattened_dim)
+
+        modules = []
+        hidden_dims_reversed = self.hidden_dims[::-1]
+
+        # All upsample stages including the last one
+        for i in range(len(hidden_dims_reversed) - 1):
+            modules.append(
+                nn.Sequential(
+                    nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False),
+                    nn.Conv2d(hidden_dims_reversed[i], hidden_dims_reversed[i + 1],
+                              kernel_size=3, padding=1),
+                    nn.BatchNorm2d(hidden_dims_reversed[i + 1]),
+                    nn.ReLU(),
+                )
+            )
+
+        # Final upsample + project back to input channels
+        modules.append(
+            nn.Sequential(
+                nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False),
+                nn.Conv2d(hidden_dims_reversed[-1], self.input_channels,
+                          kernel_size=3, padding=1),
+                nn.Sigmoid(),
+            )
+        )
+
+        self.decoder_ = nn.Sequential(*modules)
+
+    def encoder(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        x = self.encoder_(x)
+        x = torch.flatten(x, start_dim=1)
+        return self.fc_mu(x), self.fc_var(x)
+
+    def decoder(self, z: torch.Tensor) -> torch.Tensor:
+        result = self.decoder_input(z)
+        result = result.view(-1, self.hidden_dims[-1],
+                             self.feature_size[0], self.feature_size[1])
+        result = self.decoder_(result)
+        # Crop to exact input size in case of rounding mismatch
+        return result[:, :, :self.input_size[0], :self.input_size[1]]
+
+    def reparameterize(self, mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
+        std = torch.exp(0.5 * log_var)
+        return mu + torch.randn_like(std) * std
+
+    def forward(self, x: torch.Tensor):
+        mu, log_var = self.encoder(x)
+        z = self.reparameterize(mu, log_var)
+        return self.decoder(z), mu, log_var
+        """
+
 class BetaVAE(nn.Module):
     """Another implementation of beta-VAE with a more modular architecture"""
 

@@ -9,7 +9,8 @@ from torchvision.datasets import CIFAR10, MNIST, FashionMNIST
 from torch.utils.data import Dataset
 
 from imblearn.under_sampling import RandomUnderSampler
-from src.datasets import medmnist_corrected as medmnist
+# from src.datasets import medmnist_corrected as medmnist
+import medmnist
 
 
 class AbstractDataset(Dataset):
@@ -95,6 +96,7 @@ class MedMNISTDataset(AbstractDataset):
             )
 
             if self.classes != ["all"]:
+                dataset.info = dict(dataset.info)  # avoid mutating medmnist global INFO
                 class_encodings = {v: k for k, v in dataset.info["label"].items()}
                 labels = []
                 images = []
@@ -103,6 +105,7 @@ class MedMNISTDataset(AbstractDataset):
                     indices, _ = np.where(dataset.labels == int(class_ind))
                     images.append(dataset.imgs[indices])
                     labels.append(np.full(dataset.labels[indices].shape, fill_value=i))
+                
 
                 dataset.imgs = np.concatenate(images)
                 dataset.labels = np.concatenate(labels)
@@ -138,11 +141,19 @@ class MedMNISTDataset(AbstractDataset):
     def _undersample(self):
         """Undersample the dataset to balance the classes."""
 
-        rus = RandomUnderSampler(sampling_strategy=0.7, random_state=0)
+        if len(self.classes) == 2:
+            sampling_strategy = 0.7
+        elif len(self.classes) > 2:
+            target_count = int(np.bincount(self.data.labels.ravel()).min())
+            sampling_strategy = {i: target_count for i in range(len(self.classes))}
 
-        reshaped_images = np.reshape(self.data.imgs, (self.data.imgs.shape[0], -1))
+        rus = RandomUnderSampler(sampling_strategy=sampling_strategy, random_state=0)
+    
+        old_batch_size, h, w, ch_num = self.data.imgs.shape
+        reshaped_images = np.reshape(self.data.imgs, (old_batch_size, -1))
         images, labels = rus.fit_resample(reshaped_images, self.data.labels)
-        images = images.reshape(images.shape[0], self.img_size, self.img_size)
+        new_batch_size = images.shape[0]
+        images = images.reshape(new_batch_size, h, w, ch_num)
 
         if len(labels.shape) < 2:
             labels = np.expand_dims(labels, axis=-1)
@@ -150,7 +161,10 @@ class MedMNISTDataset(AbstractDataset):
         self.data.imgs = images
         self.data.labels = labels
 
-        self.data.info["n_samples"][self.split] = images.shape[0]
+        self.data.info["n_samples"][self.split] = new_batch_size
+    
+    def __len__(self):
+        return self.data.imgs.shape[0]
 
 
 class CIFAR10Dataset(Dataset):
