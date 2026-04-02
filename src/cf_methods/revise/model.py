@@ -8,9 +8,6 @@ from torch import nn
 
 from tqdm import tqdm
 
-# from abc import ABC, abstractmethod
-from torch.utils.data import TensorDataset
-
 # from src.models.vae import VAE
 
 
@@ -96,79 +93,75 @@ class Revise:
         return self._counterfactual_optimization(factuals, verbose)
 
     def _counterfactual_optimization(self, factuals: torch.Tensor, verbose: bool):
-        factuals_ds = TensorDataset(factuals)
-        test_loader = torch.utils.data.DataLoader(
-            factuals_ds, batch_size=1, shuffle=True
-        )
         self._mlmodel.eval()
         self._mlmodel = self._mlmodel.to(self.device)
         self.vae = self.vae.to(self.device)
 
+        N = factuals.shape[0]
+        factuals = factuals.to(self.device)
+
+        target = torch.FloatTensor(self._target_class).to(self.device)  # [1, num_classes]
+        target_prediction = torch.argmax(target)
+        target_batch = target.expand(N, -1)  # [N, num_classes]
+
+        # Encode all instances in one forward pass
+        z_mu, _ = self.vae.encoder(factuals)
+        z = z_mu.clone().detach().requires_grad_(True)
+
+        if self._optimizer_name == "Adam":
+            optim = torch.optim.Adam([z], self._lr)
+        else:
+            optim = torch.optim.RMSprop([z], self._lr)
+
+        # Per-instance candidate tracking
+        candidate_counterfactuals = [[] for _ in range(N)]
+        candidate_distances = [[] for _ in range(N)]
+
+        for _ in tqdm(range(self._max_iter)):
+            cf = self.vae.decoder(z)                          # [N, C, H, W]
+            output = self._mlmodel(cf)                        # [N, num_classes]
+            predicted = torch.argmax(output, dim=1)           # [N]
+
+            loss_per_instance = self._compute_loss(cf, factuals, target_batch)  # [N]
+
+            valid_mask = (predicted == target_prediction)
+            if valid_mask.any():
+                cf_np = cf.cpu().detach().numpy()
+                loss_np = loss_per_instance.cpu().detach().numpy()
+                for i in range(N):
+                    if valid_mask[i]:
+                        candidate_counterfactuals[i].append(cf_np[i])
+                        candidate_distances[i].append(loss_np[i])
+
+            loss_per_instance.sum().backward()
+            optim.step()
+            optim.zero_grad()
+
+        # Choose the nearest counterfactual per instance
         list_cfs = []
-        for query_instance in tqdm(test_loader, total=len(test_loader)):
-            query_instance = query_instance[0].to(self.device)
-
-            target = torch.FloatTensor(self._target_class).to(self.device)
-            target_prediction = torch.argmax(target)
-
-            # encode the features
-            z_mu, _ = self.vae.encoder(query_instance)
-            z = z_mu.clone().detach().requires_grad_(True)
-
-            if self._optimizer_name == "Adam":
-                optim = torch.optim.Adam([z], self._lr)
-            else:
-                optim = torch.optim.RMSprop([z], self._lr)
-
-            candidate_counterfactuals = []  # all possible counterfactuals
-            candidate_distances = []
-            all_loss = []
-
-            for _ in range(self._max_iter):
-                cf = self.vae.decoder(z)
-
-                output = self._mlmodel(cf)
-                predicted = torch.argmax(output)
-
-                z.requires_grad = True
-                loss = self._compute_loss(cf, query_instance, target)
-                all_loss.append(loss)
-
-                if predicted == target_prediction:
-                    candidate_counterfactuals.append(
-                        cf.cpu().detach().numpy().squeeze(axis=0)
-                    )
-                    candidate_distances.append(loss.cpu().detach().numpy())
-
-                loss.backward()
-                optim.step()
-                optim.zero_grad()
-
-            # Choose the nearest counterfactual
-            if len(candidate_counterfactuals):
+        for i in range(N):
+            if candidate_counterfactuals[i]:
                 if verbose:
-                    print("Counterfactual found!")
-                array_counterfactuals = np.array(candidate_counterfactuals)
-                array_distances = np.array(candidate_distances)
-
+                    print(f"Counterfactual found for instance {i}!")
+                array_distances = np.array(candidate_distances[i])
                 index = np.argmin(array_distances)
-                list_cfs.append(array_counterfactuals[index])
+                list_cfs.append(candidate_counterfactuals[i][index])
             else:
                 if verbose:
-                    print("No counterfactual found")
-                list_cfs.append(
-                    []
-                )  # query_instance.cpu().detach().numpy().squeeze(axis=0)
+                    print(f"No counterfactual found for instance {i}")
+                list_cfs.append([])
         return list_cfs
 
     def _compute_loss(self, cf_initialize, query_instance, target):
-        loss_function = nn.BCEWithLogitsLoss()
+        """Compute per-instance loss. Returns shape [N]."""
+        loss_function = nn.BCEWithLogitsLoss(reduction="none")
         output = self._mlmodel(cf_initialize)
 
-        # classification loss
-        loss1 = loss_function(output, target)
+        # classification loss: average over classes per instance -> [N]
+        loss1 = loss_function(output, target).mean(dim=1)
 
-        # distance loss
-        loss2 = torch.norm((cf_initialize - query_instance), 1)
+        # distance loss: L1 norm per instance -> [N]
+        N = cf_initialize.shape[0]
+        loss2 = (cf_initialize - query_instance).abs().view(N, -1).sum(dim=1)
 
         return loss1 + self._lambda * loss2

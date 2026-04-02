@@ -31,7 +31,8 @@ class DatasetBuilder:
                 img_size=self.img_size,
                 download=self.args.download,
                 # TODO: create separate augmentations for train, val, and test
-                transform=AUGMENTATIONS["standard"],
+                transform=AUGMENTATIONS["standard_resnet"] if self.args.name == 'dermamnist' 
+                                                           else AUGMENTATIONS["standard"],
                 increase_channels=self.args.increase_channels,
                 undersample=self.args.undersample_flag,
                 channels_first=self.args.channels_first,

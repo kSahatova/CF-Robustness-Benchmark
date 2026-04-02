@@ -1,13 +1,13 @@
 # This is a configuration file for training a classifier on the dermamnist_corrected_224 dataset.
-data_dir : "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+data_dir : "/teamspace/studios/this_studio/CF-Robustness-Benchmark/data"
 # "D:/PycharmProjects/CF-Robustness-Benchmark/data"
 
 # configure the dataset 
 data: {
   name : "dermamnist",
   class_name : 'MedMNISTDataset',
-  classes: ['basal cell carcinoma', 'benign keratosis-like lesions', 'melanoma', 'melanocytic nevi' ], 
-  # classes: ['benign keratosis-like lesions', 'melanoma'],
+  # classes: ['basal cell carcinoma', 'benign keratosis-like lesions', 'melanoma', 'melanocytic nevi' ], 
+  classes: ['benign keratosis-like lesions', 'melanoma'],
 
   # CLASS MAPPING  [choose class index to include]
   # '0': 'actinic keratoses and intraepithelial carcinoma',
@@ -18,8 +18,8 @@ data: {
   # '5': 'melanocytic nevi',
   # '6': 'vascular lesions'
 
-  num_classes: 4,
-  # num_classes: 2,
+  # num_classes: 4,
+  num_classes: 2,
   img_size: 64,
   download: True,
   undersample_flag: False, # if the dataset is unbalanced, set to True to undersample the majority class in binary setting
@@ -32,10 +32,6 @@ classifier:
   name: "resnet50" # a class name of the predictive model to use
   args:
     input_channels: 3 # number of input channels
-    in_conv_channels: [3, 8, 16, 32] 
-    out_conv_channels: [8, 16, 32, 64]
-    conv_kernels: [7, 5, 5, 3]
-    softmax_flag: True
   # path to the checkpoints
   checkpoints_path: ""
   
@@ -62,7 +58,8 @@ batch_size: 32
 num_workers: 1
 accelerator: "cuda"
 devices: 1 # number of devices to use
-save_dir: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/derma_classification"
+save_dir: "/teamspace/studios/this_studio/CF-Robustness-Benchmark/notebooks/experiments/dermamnist_classification/binary"
+# save_dir: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/derma_classification"
 # "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments"
 checkpoint_path: " " # path to the checkpoint to resume training
 

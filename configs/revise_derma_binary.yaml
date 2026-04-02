@@ -1,13 +1,13 @@
 # This is a configuration file that to run REVISE algorithm on the MNIST dataset.
-data_dir : "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+data_dir : "/teamspace/studios/this_studio/CF-Robustness-Benchmark/data"
 
 # configure the dataset 
 data: {
-  name : "dermamnist_corrected_224",
+  name : "dermamnist",
   class_name : 'MedMNISTDataset',
   classes: ['benign keratosis-like lesions', 'melanoma'], 
   num_classes: 2,
-  img_size: 224,
+  img_size: 64,
   download: True,
   undersample_flag: False, # if the dataset is unbalanced, set to True to undersample the majority class in binary setting
   channels_first: True, # if True, the input tensor is in (C, H, W) format, otherwise (H, W, C)
@@ -25,22 +25,22 @@ classifier:
     softmax_flag: True
   lightning_used: True
   # path to the checkpoints
-  checkpoints_path: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=30_accuracy=0.87_resnet50.pth"
+  checkpoints_path: "/teamspace/studios/this_studio/CF-Robustness-Benchmark/notebooks/experiments/derma_classification/binary/checkpoints/derma_epoch=30_accuracy=0.87_resnet50.pth"
 
 vae:
-  name: "BetaVAE" # name of the model to use
+  name: "BetaVAEDerma" # name of the model to use
   args:
     latent_dim: 256 # dimension of the latent space
-    hidden_dims: [32, 64, 128, 256, 512] # hidden dimensions for the encoder and decoder
+    hidden_dims: [32, 64, 128, 256] # hidden dimensions for the encoder and decoder
     input_channels: 3 # number of input channels (1 for grayscale images)
-    beta: 0.2 # weight for the KL divergence term in the loss function
-  checkpoints_path: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/dermamnist_corrected_224_vae/binary/checkpoints/dermamnist_corrected_224_benign keratosis-like lesions_melanoma_epoch=58.pth"
+    beta: 0.05 # weight for the KL divergence term in the loss function
+  checkpoints_path: "/teamspace/studios/this_studio/CF-Robustness-Benchmark/notebooks/experiments/dermamnist_vae/binary/checkpoints/dermamnist_benign keratosis-like lesions_melanoma_epoch=96.pth"
 
 revise_hyperparameters:
   lambda: 0.01
   optimizer: "Adam"
   lr: 0.1
-  max_iter: 700
+  max_iter: 1000
   target_class_ind: [[0, 1]]
 
 
@@ -48,5 +48,5 @@ batch_size: 64
 num_workers: 1
 accelerator: "cuda"
 devices: 1 # number of devices to use
-save_dir: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/cf_output/fmnist/revise_binary"
+save_dir: "/teamspace/studios/this_studio/CF-Robustness-Benchmark/cf_output/derma/revise_binary"
 #save_dir: "D:/PycharmProjects/CF-Robustness-Benchmark/cf_output/mnist/revise_binary"

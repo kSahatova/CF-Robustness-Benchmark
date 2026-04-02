@@ -151,7 +151,7 @@ class Annealer:
         return y_out
 
 
-"""class BetaVAE(nn.Module):
+class BetaVAEDerma(nn.Module):
 
     def __init__(
         self,
@@ -249,7 +249,7 @@ class Annealer:
         mu, log_var = self.encoder(x)
         z = self.reparameterize(mu, log_var)
         return self.decoder(z), mu, log_var
-        """
+        
 
 class BetaVAE(nn.Module):
     """Another implementation of beta-VAE with a more modular architecture"""

@@ -29,8 +29,13 @@ adv_data_transform = A.Compose(
 data_transform = A.Compose([A.Normalize(mean=0.0, std=1.0), ])
                             # A.Resize(height=IMG_SIZE, width=IMG_SIZE)])
 
+data_transform_resnet = A.Compose([A.Normalize(mean=[0.485, 0.456, 0.406], 
+                                               std=[0.229, 0.224, 0.225])])
+                            # A.Resize(height=IMG_SIZE, width=IMG_SIZE)])
 
-AUGMENTATIONS = {"advanced": adv_data_transform, "standard": data_transform}
+AUGMENTATIONS = {"advanced": adv_data_transform, 
+                 "standard": data_transform,
+                 "standard_resnet": data_transform_resnet}
 
 
 if __name__ == "__main__":

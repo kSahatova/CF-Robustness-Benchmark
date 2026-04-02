@@ -187,9 +187,12 @@ class SimpleCNNtorch(nn.Module):
         return total_params
 
 
-def build_resnet50(num_classes):
+def build_resnet50(num_classes, freeze_backbone=True):
     """Builds an object of the ResNet50 class with the pretrained weights"""
     cnn = resnet50(weights="DEFAULT")
+    if freeze_backbone:
+        for param in cnn.parameters():
+            param.requires_grad = False
     cnn.fc = torch.nn.Linear(cnn.fc.in_features, num_classes)
     return cnn
 

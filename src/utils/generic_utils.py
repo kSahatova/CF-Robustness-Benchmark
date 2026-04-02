@@ -89,7 +89,7 @@ def load_model_weights(
         print(f"Error loading model weights: {e}")
 
 
-def evaluate_classification_model(model, dataloader, num_classes) -> None:
+def evaluate_classification_model(model, dataloader, num_classes, device) -> None:
     """Evaluates accuracy of the classification model on the given dataloader.
     Args:
         model (nn.Module): The classification model to evaluate.
@@ -98,13 +98,19 @@ def evaluate_classification_model(model, dataloader, num_classes) -> None:
     Returns:
         None
     """
+    if device is None:
+        device = 'cuda' if torch.cuda.is_available  else 'cpu'
+
     calc_metric = Accuracy(
         task="binary" if num_classes == 2 else "multiclass", num_classes=num_classes
     )
 
     metric = 0
+    if next(model.parameters()).device.type != device:
+        model = model.to(device)
+
     for images, labels in dataloader:
-        preds = torch.argmax(model(images), axis=1, keepdim=False)
+        preds = torch.argmax(model(images.to(device)), axis=1, keepdim=False).detach().cpu()
         metric += calc_metric(preds, labels)
 
     print("Accuracy for the test dataset: {:.3%}".format(metric / len(dataloader)))

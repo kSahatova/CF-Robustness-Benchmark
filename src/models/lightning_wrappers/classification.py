@@ -87,15 +87,16 @@ class ClassifierLightningWrapper(LightningModule):
         self.valid_metrics.reset()
 
     def configure_optimizers(self):
-        optimizer = self.optimizer(self.parameters(), **self.optim_args)
-        if self.is_lr_enabled:
-            lr_scheduler = self.lr_scheduler(optimizer, **self.lr_scheduler_args)
-            return {'optimizer': optimizer, 
-                    'lr_scheduler': {"scheduler": lr_scheduler,
-                                    "monitor": "train_loss"}
-                    }
-        else:
-            return optimizer
+        if self.optimizer  is None:
+            optimizer = self.optimizer(self.parameters(), **self.optim_args)
+            if self.is_lr_enabled:
+                lr_scheduler = self.lr_scheduler(optimizer, **self.lr_scheduler_args)
+                return {'optimizer': optimizer, 
+                        'lr_scheduler': {"scheduler": lr_scheduler,
+                                        "monitor": "train_loss"}
+                        }
+            else:
+                return optimizer
 
     def on_save_checkpoint(self, checkpoint):
         checkpoint['state_dict'] = {k.partition('model.')[2]: v for k,v in checkpoint['state_dict'].items()}
