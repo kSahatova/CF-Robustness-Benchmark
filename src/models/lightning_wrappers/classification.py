@@ -25,6 +25,10 @@ class ClassifierLightningWrapper(LightningModule):
         self.optimizer = getattr(torch.optim, config.optimizer.name)
         self.optim_args = config.optimizer.args
 
+        # External code can set this to a pre-built optimizer instance
+        # to override the default construction in configure_optimizers()
+        self._custom_optimizer = None
+
         self.lr_scheduler = getattr(torch.optim.lr_scheduler, config.lr_scheduler.name)
         self.is_lr_enabled = config.lr_scheduler.enable
         self.lr_scheduler_args = config.lr_scheduler.args
@@ -87,16 +91,24 @@ class ClassifierLightningWrapper(LightningModule):
         self.valid_metrics.reset()
 
     def configure_optimizers(self):
-        if self.optimizer  is None:
+        # Use custom optimizer if one was injected, otherwise build from config
+        if self._custom_optimizer is not None:
+            optimizer = self._custom_optimizer
+        else:
             optimizer = self.optimizer(self.parameters(), **self.optim_args)
-            if self.is_lr_enabled:
-                lr_scheduler = self.lr_scheduler(optimizer, **self.lr_scheduler_args)
-                return {'optimizer': optimizer, 
-                        'lr_scheduler': {"scheduler": lr_scheduler,
-                                        "monitor": "train_loss"}
-                        }
-            else:
-                return optimizer
+        
+        if self.is_lr_enabled:
+            lr_scheduler = self.lr_scheduler(optimizer, **self.lr_scheduler_args)
+            return {
+                'optimizer': optimizer, 
+                'lr_scheduler': {
+                    "scheduler": lr_scheduler,
+                    "monitor": "val_loss",
+                },
+            }
+        else:
+            return optimizer
+
 
     def on_save_checkpoint(self, checkpoint):
         checkpoint['state_dict'] = {k.partition('model.')[2]: v for k,v in checkpoint['state_dict'].items()}

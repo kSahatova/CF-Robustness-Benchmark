@@ -8,4 +8,10 @@ experiments
 **mlruns
 **experiments
 test_memory_profiling.ipynb
-**/.vscode
+.vscode
+taming-transformers
+src/cf_methods/c3lt/weights
+cf_notebooks/derma/taming
+src/cf_methods/ebe
+src/cf_methods/dissect
+src/cf_methods/coin

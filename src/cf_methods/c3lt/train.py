@@ -18,6 +18,15 @@ def train_c3lt(args, dataloaders):
     writer = SummaryWriter(args.log_path)
     dataloader, dataloader_test = dataloaders
     Tensor = torch.cuda.FloatTensor if args.device == "cuda" else torch.FloatTensor
+    
+    if args.data_name == 'dermamnist':
+        renorm = RenormalizeGANToClassifier(dataset_mean=args.dataset_mean,
+                                            dataset_std=args.dataset_std,  
+                                            device=args.device
+                                        )
+        args.renorm = renorm
+    else:
+        args.renorm = None
 
     # load pretrained modules
     generator, discriminator = load_pretrained_gan(args)
@@ -88,10 +97,28 @@ def train_c3lt(args, dataloaders):
                 z_2_cyc = nonlinear_map_step(latents_2[-1], g, args.n_steps)[-1]
                 imgs_1_cyc, imgs_2_cyc = generator(z_1_cyc), generator(z_2_cyc)
 
+            if args.norm_reg_weight is not None: 
+                norm_reg = (
+                            (torch.norm(latents_1[-1].view(cur_btch, -1), dim=1) -
+                            torch.norm(latents_1[0].view(cur_btch, -1), dim=1)).pow(2).mean() +
+                            (torch.norm(latents_2[-1].view(cur_btch, -1), dim=1) -
+                            torch.norm(latents_2[0].view(cur_btch, -1), dim=1)).pow(2).mean()
+                        ) / 2
+            else:
+                norm_reg = torch.zeros(1).to(args.device)
+                
+
             # consistency loss
             if args.beta:
-                cyc_loss = (perceptual_loss(imgs_1, imgs_1_cyc, classifier, layers=args.extracted_layers) +
-                            perceptual_loss(imgs_2, imgs_2_cyc, classifier, layers=args.extracted_layers) +
+                use_derma = getattr(args, 'data_name', '') == 'dermamnist'
+                cyc_loss = (perceptual_loss(imgs_1, imgs_1_cyc, classifier, 
+                                            layers=args.extracted_layers, 
+                                            use_derma_extractor=use_derma,
+                                            renorm=args.renorm) +
+                            perceptual_loss(imgs_2, imgs_2_cyc, classifier, 
+                                            layers=args.extracted_layers, 
+                                            use_derma_extractor=use_derma,
+                                            renorm=args.renorm) +
                             L1(latents_1[0], z_1_cyc) + L1(latents_2[0], z_2_cyc)) / 4
             else:
                 cyc_loss = torch.zeros(1).to(args.device)
@@ -105,10 +132,14 @@ def train_c3lt(args, dataloaders):
             else:
                 adv_loss = torch.zeros(1).to(args.device)
 
+            if i == 100 and epoch == 3:
+                print(f"Norm drift: {(torch.norm(latents_1[-1].view(cur_btch,-1), dim=1) - 
+                        torch.norm(latents_1[0].view(cur_btch,-1), dim=1)).abs().mean():.3f}")            
             loss = cls_loss + \
                    args.alpha * prox_loss + \
                    args.beta * cyc_loss + \
-                   args.gamma * adv_loss
+                   args.gamma * adv_loss + \
+                   args.norm_reg_weight * norm_reg
             loss.backward(retain_graph=False)
             optimizer.step()
 

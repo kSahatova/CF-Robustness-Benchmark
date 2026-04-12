@@ -144,8 +144,13 @@ class MedMNISTDataset(AbstractDataset):
         if len(self.classes) == 2:
             sampling_strategy = 0.7
         elif len(self.classes) > 2:
-            target_count = int(np.bincount(self.data.labels.ravel()).min())
-            sampling_strategy = {i: target_count for i in range(len(self.classes))}
+            # target_count = int(np.bincount(self.data.labels.ravel()).min())
+            # sampling_strategy = {i: target_count for i in range(len(self.classes))}
+            counts = np.bincount(self.data.labels.ravel())
+            median_count = int(np.median(counts))
+            sampling_strategy = {
+                i: min(count, median_count) for i, count in enumerate(counts)
+            }
 
         rus = RandomUnderSampler(sampling_strategy=sampling_strategy, random_state=0)
     

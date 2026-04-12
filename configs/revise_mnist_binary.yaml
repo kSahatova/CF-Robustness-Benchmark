@@ -33,7 +33,8 @@ classifier:
     input_channels: 1 # number of input channels
     softmax_flag: True
   # path to the checkpoints
-  checkpoints_path: '/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/classifier_mnist_1_7.pth'
+  checkpoints_path: "/teamspace/studios/this_studio/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/multi/checkpoints/classifier_mnist.pth"
+  # '/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/mnist_classification/binary/checkpoints/classifier_mnist_1_7.pth'
 
 vae:
   name: "BetaVAE" # name of the model to use
@@ -59,5 +60,5 @@ batch_size: 64
 num_workers: 1
 accelerator: "cuda"
 devices: 1 # number of devices to use
-save_dir: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/cf_output/mnist/revise_binary"
-# "D:/PycharmProjects/CF-Robustness-Benchmark/cf_output/mnist/revise_binary"
+save_dir: "/teamspace/studios/this_studio/CF-Robustness-Benchmark/cf_output/mnist/c3lt_multi"
+# "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/cf_output/mnist/revise_binary"

@@ -4,13 +4,17 @@ from . import models
 from . import modules
 from . import train
 from . import args
+from . import models_derma
 
 import torch
 from .modules import NLMappingConv
 from .helper import (
+    forward_map,
     load_pretrained_classifier,
     load_pretrained_gan,
     load_pretrained_encoder,
+    nonlinear_map_step,
+    forward_map
 )
 from easydict import EasyDict
 from src.utils import load_model_weights
@@ -54,26 +58,48 @@ class C3LTModel:
         self.generator, _ = load_pretrained_gan(self.config)
         self.encoder = load_pretrained_encoder(self.config)
 
+    # def get_counterfactuals(self, factuals: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+    #     """
+    #     Generate counterfactuals for the given factuals using the pretrained parts of the C3LT model.
+    #     Args:
+    #         factuals (torch.Tensor): The input factuals to generate counterfactuals for.
+    #     Returns:
+    #         torch.Tensor: The generated counterfactuals.
+    #     """
+    #     if self.task == 'multiclass':
+    #         cfes = []
+    #         factuals = factuals.to(self.config.device)
+    #         latent_codes = self.encoder(factuals)
+    #         for idx, latent_code in enumerate(latent_codes):
+    #             mapper = self.mapper[labels[idx].item()]
+    #             map_to_target_class = mapper(latent_code.unsqueeze(0))
+    #             cfes.append(self.generator(map_to_target_class))
+    #         cfes = torch.concat(cfes, axis=0)
+    #     elif self.task == 'binary':
+    #         embeddings = self.encoder(factuals)
+    #         cf_embeddings = self.mapper(embeddings)
+    #         cfes = self.generator(cf_embeddings)
+
+    #     return cfes
     def get_counterfactuals(self, factuals: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        """
-        Generate counterfactuals for the given factuals using the pretrained parts of the C3LT model.
-        Args:
-            factuals (torch.Tensor): The input factuals to generate counterfactuals for.
-        Returns:
-            torch.Tensor: The generated counterfactuals.
-        """
+        factuals = factuals.to(self.config.device)
+    
         if self.task == 'multiclass':
             cfes = []
-            factuals = factuals.to(self.config.device)
-            latent_codes = self.encoder(factuals)
-            for idx, latent_code in enumerate(latent_codes):
+            for idx in range(factuals.shape[0]):
                 mapper = self.mapper[labels[idx].item()]
-                map_to_target_class = mapper(latent_code.unsqueeze(0))
-                cfes.append(self.generator(map_to_target_class))
-            cfes = torch.concat(cfes, axis=0)
+                # Use forward_map to get correct pooling + n-step walk
+                path_imgs, _ = forward_map(
+                    factuals[idx].unsqueeze(0), self.encoder, self.generator, 
+                    mapper, self.config
+                )
+                cfes.append(path_imgs[-1])
+            cfes = torch.cat(cfes, dim=0)
+            
         elif self.task == 'binary':
-            embeddings = self.encoder(factuals)
-            cf_embeddings = self.mapper(embeddings)
-            cfes = self.generator(cf_embeddings)
+            path_imgs, _ = forward_map(
+                factuals, self.encoder, self.generator, self.mapper, self.config
+            )
+            cfes = path_imgs[-1]
 
         return cfes

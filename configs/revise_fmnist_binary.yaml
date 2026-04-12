@@ -1,5 +1,5 @@
 # This is a configuration file that to run REVISE algorithm on the MNIST dataset.
-data_dir : "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/data"
+data_dir : "/teamspace/studios/this_studio/CF-Robustness-Benchmark/data"
 
 # configure the dataset 
 data: {
@@ -25,8 +25,8 @@ classifier:
     softmax_flag: True
   lightning_used: True
   # path to the checkpoints
-  checkpoints_path: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/fmnist_classification/binary/checkpoints/fmnist_0_4_epoch=06_val_accuracy=0.99.pth"
-  # "D:/PycharmProjects/CF-Robustness-Benchmark/notebooks/experiments/fmnist_classification/binary/checkpoints/fmnist_0_4_epoch=06_val_accuracy=0.99.pth"
+  checkpoints_path: "fmnist_classification/binary/checkpoints/fmnist_0_4_epoch=06_val_accuracy=0.99.pth"
+  # checkpoints_path: "/data/leuven/365/vsc36567/CF-Robustness-Benchmark/notebooks/experiments/fmnist_classification/binary/checkpoints/fmnist_0_4_epoch=06_val_accuracy=0.99.pth"
 
 vae:
   name: "BetaVAE" # name of the model to use

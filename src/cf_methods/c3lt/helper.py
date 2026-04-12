@@ -3,15 +3,17 @@ import time
 import pprint
 import glob
 import torch
+import torch.nn.functional as F
 from torch import nn
 from PIL import Image
 from copy import deepcopy
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 from src.cf_methods.c3lt.modules import *
-from src.cf_methods.c3lt.models import Generator, Discriminator, Encoder
+# from src.cf_methods.c3lt.models import Generator, Discriminator, Encoder
+# from src.cf_methods.c3lt import models_derma
 from src.models import classifiers
-from src.cf_methods.c3lt.modules import MNISTFeatureExtractor
+from src.cf_methods.c3lt.modules import MNISTFeatureExtractor, DermaMNISTFeatureExtractor
 from src.utils import load_model_weights
 
 
@@ -21,15 +23,19 @@ def load_pretrained_gan(args):
     :param args:
     :return:
     """
-    
-    generator = Generator(args.latent_dim).to(args.device)
+    if args.data_name == "dermamnist":
+        from src.cf_methods.c3lt.models_derma import Generator as _Generator, Discriminator as _Discriminator
+    else:
+        from src.cf_methods.c3lt.models import Generator as _Generator, Discriminator as _Discriminator
+
+    generator = _Generator(args.latent_dim).to(args.device)
     generator.load_state_dict(torch.load(args.gen_path, map_location=args.device))
     generator.requires_grad = False
     generator.eval()
     print("Generator loaded!")
 
     # discriminator_enc = Discriminator().to(args.device)
-    discriminator = Discriminator().to(args.device)
+    discriminator = _Discriminator().to(args.device)
     discriminator.load_state_dict(torch.load(args.disc_path, map_location=args.device))
     discriminator.requires_grad = False
     discriminator.eval()
@@ -52,7 +58,12 @@ def load_pretrained_encoder(args):
 
     # enc_path = f"models/encoders/encoder_{args.dataset}_{cls_pair}.pt"
 
-    encoder = Encoder(latent_dim=args.latent_dim, ndf=args.ndf).to(args.device)
+    if args.data_name == "dermamnist":
+        from src.cf_methods.c3lt.models_derma import Encoder as _Encoder
+    else:
+        from src.cf_methods.c3lt.models import Encoder as _Encoder
+
+    encoder = _Encoder(latent_dim=args.latent_dim, ndf=args.ndf).to(args.device)
 
     if os.path.exists(args.enc_path):
         encoder.load_state_dict(torch.load(args.enc_path, map_location=args.device))
@@ -147,6 +158,10 @@ def forward_map(imgs, encoder, generator, map_func, args):
     :return:
     """
     z = encoder(imgs)
+    # Pool spatial dims to 1x1 so the GAN generator (which expects latent_dim x 1 x 1)
+    # receives the correct shape regardless of encoder output spatial size (e.g. 2x2).
+    # if z.dim() == 4 and (z.shape[2] != 1 or z.shape[3] != 1):
+    #     z = F.adaptive_avg_pool2d(z, 1)
     out_z = nonlinear_map_step(z, map_func, args.n_steps)
     path_imgs = list(map(generator, out_z))
     return path_imgs, out_z
@@ -170,6 +185,7 @@ def nonlinear_map_step(z, map_func, n_steps):
     for _ in range(1, n_steps + 1):
         z_step = z_prev + map_func(z_prev.view(z_shape)).view(z_shape[0], -1)
         z_step_norm = torch.norm(z_step, dim=1).view(-1, 1)
+        # TODO: document the fix : removed the hard norm-projection 
         z_step = z_step * z_norm / z_step_norm
         out_to.append(z_step.view(z_shape))
         z_prev = z_step
@@ -186,6 +202,10 @@ def classifier_loss(classifier, images, target_class, args, reduction="mean"):
     :param reduction:
     :return:
     """
+
+    if args.renorm is not None:
+        images = args.renorm(images)
+
     if args.cls_type == "hinge":
         output = torch.nn.Softmax(dim=1)(classifier(images))
         num_samples, num_classes = output.shape
@@ -221,19 +241,45 @@ def classifier_loss(classifier, images, target_class, args, reduction="mean"):
             .to(images.device)
             .long()
         )
+        if args.data_name == 'dermamnist':
+            return loss(F.log_softmax(classifier(images)), target)
+            
         return loss(classifier(images), target)
+    
     elif args.cls_type == "bce":
-        loss = nn.CrossEntropyLoss(reduction=reduction)
-        target = (
-            torch.empty(
-                images.shape[0],
-            )
-            .fill_(target_class)
-            .to(images.device)
-            .long()
+        logits = classifier(images)
+    
+        # If your classifier is wrapped in lightning or has 
+        # a different forward signature, adapt accordingly:
+        # if isinstance(logits, dict):
+        #     logits = logits['logits']  
+        
+        target = torch.full(
+            (images.shape[0],), target_class,
+            dtype=torch.long, device=images.device
         )
-        return loss(classifier(images), target)
+        return nn.CrossEntropyLoss(reduction=reduction)(logits, target)
 
+    elif args.cls_type == 'margin_based':
+        logits = classifier(images)
+    
+        if isinstance(logits, dict):
+            logits = logits['logits']
+        elif isinstance(logits, tuple):
+            logits = logits[0]
+        
+        num_classes = logits.shape[1]
+        target_logit = logits[:, target_class]
+        
+        mask = torch.ones(num_classes, device=images.device, dtype=torch.bool)
+        mask[target_class] = False
+        max_other_logit = logits[:, mask].max(dim=1)[0]
+        
+        # Won't stop until target_logit > max_other_logit + kappa
+        loss = torch.clamp(max_other_logit - target_logit + args.kappa, min=0.0)
+        
+        return loss.mean() if reduction == "mean" else loss.sum()
+    
     else:
         raise ValueError
 
@@ -305,8 +351,10 @@ def perceptual_loss(
     imgs_2,
     model,
     input_dis_penalty=1.0,
-    layers=("layer1", "layer2"),
+    layers=("layer1", "layer2", "layer3", "layer4"),
     reduction="mean",
+    use_derma_extractor=False,
+    renorm=None
 ):
     """
         calculates perceptual loss given two set of images.
@@ -316,17 +364,29 @@ def perceptual_loss(
     :param input_dis_penalty:
     :param layers:
     :param reduction:
+    :param use_derma_extractor: if True, use DermaMNISTFeatureExtractor (hook-based,
+        works with CNNtorch, SimpleCNNtorch, and ResNet50 classifiers for DermaMNIST).
     :return:
     """
 
-    featex = MNISTFeatureExtractor(model, layers)
+    # Renormalize for classifier feature extraction
+    feat_imgs_1 = renorm(imgs_1) if renorm is not None else imgs_1
+    feat_imgs_2 = renorm(imgs_2) if renorm is not None else imgs_2
+
+    if use_derma_extractor:
+        featex = DermaMNISTFeatureExtractor(model, layers)
+    else:
+        featex = MNISTFeatureExtractor(model, layers)
     L1 = torch.nn.L1Loss(reduction=reduction)
 
-    # perceptual loss
     out = 0
-    for f, g in zip(featex(imgs_1), featex(imgs_2)):
+    for f, g in zip(featex(feat_imgs_1), featex(feat_imgs_2)):
         out += L1(f, g)
+    # L1 on raw images stays in GAN space (same normalization for both)
     out += L1(imgs_1, imgs_2) * input_dis_penalty
+
+    if use_derma_extractor:
+        featex.remove_hooks()
 
     return out / (1 + len(layers))
 
@@ -478,3 +538,24 @@ def gen_masks(inputs, targets, mode="abs"):
         raise ValueError("mode value is not valid!")
 
     return masks.view(inputs.shape)
+
+
+class RenormalizeGANToClassifier:
+    """
+    Converts images from GAN normalization (mean=0.5, std=0.5 → [-1, 1])
+    to classifier normalization (dataset-specific mean/std).
+    """
+    def __init__(self, dataset_mean, dataset_std, device="cuda"):
+        # GAN images are in [-1, 1], first undo to [0, 1]
+        # then apply classifier normalization: (x - mean) / std
+        self.gan_mean = torch.tensor([0.5, 0.5, 0.5], device=device).view(1, 3, 1, 1)
+        self.gan_std = torch.tensor([0.5, 0.5, 0.5], device=device).view(1, 3, 1, 1)
+        self.cls_mean = torch.tensor(dataset_mean, device=device).view(1, 3, 1, 1)
+        self.cls_std = torch.tensor(dataset_std, device=device).view(1, 3, 1, 1)
+
+    def __call__(self, images):
+        # [-1, 1] → [0, 1]
+        images_01 = images * self.gan_std + self.gan_mean
+        # [0, 1] → classifier space
+        images = (images_01 - self.cls_mean) / self.cls_std
+        return images.to(torch.float32)

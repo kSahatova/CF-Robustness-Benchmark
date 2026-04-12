@@ -96,6 +96,7 @@ class Revise:
         self._mlmodel.eval()
         self._mlmodel = self._mlmodel.to(self.device)
         self.vae = self.vae.to(self.device)
+        # self.vae.eval()
 
         N = factuals.shape[0]
         factuals = factuals.to(self.device)
@@ -117,17 +118,21 @@ class Revise:
         candidate_counterfactuals = [[] for _ in range(N)]
         candidate_distances = [[] for _ in range(N)]
 
-        for _ in tqdm(range(self._max_iter)):
+        for step in tqdm(range(self._max_iter)):
             cf = self.vae.decoder(z)                          # [N, C, H, W]
             output = self._mlmodel(cf)                        # [N, num_classes]
             predicted = torch.argmax(output, dim=1)           # [N]
 
             loss_per_instance = self._compute_loss(cf, factuals, target_batch)  # [N]
-
             valid_mask = (predicted == target_prediction)
+            
+            if verbose and step % 100 == 0:
+                print(f"[iter {step}] loss: {loss_per_instance.mean().item():.4f}, valid: {valid_mask.sum().item()}/{N}")
+
             if valid_mask.any():
                 cf_np = cf.cpu().detach().numpy()
                 loss_np = loss_per_instance.cpu().detach().numpy()
+
                 for i in range(N):
                     if valid_mask[i]:
                         candidate_counterfactuals[i].append(cf_np[i])

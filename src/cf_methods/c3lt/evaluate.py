@@ -112,8 +112,9 @@ def evaluate(encoder, maps, generator, discriminator, classifier, dataloader, ar
             z_2_cyc = nonlinear_map_step(latents_2[-1], g, args.n_steps)[-1]
             imgs_1_cyc, imgs_2_cyc = generator(z_1_cyc), generator(z_2_cyc)
 
-            cyc_loss += (perceptual_loss(imgs_1, imgs_1_cyc, classifier) +
-                         perceptual_loss(imgs_2, imgs_2_cyc, classifier) +
+            use_derma = getattr(args, 'data_name', '') == 'dermamnist'
+            cyc_loss += (perceptual_loss(imgs_1, imgs_1_cyc, classifier, layers=args.extracted_layers, use_derma_extractor=use_derma) +
+                         perceptual_loss(imgs_2, imgs_2_cyc, classifier, layers=args.extracted_layers, use_derma_extractor=use_derma) +
                          L1(latents_1[0], z_1_cyc) +
                          L1(latents_2[0], z_2_cyc)
                          ) / 4 * cur_btch
@@ -131,6 +132,8 @@ def evaluate(encoder, maps, generator, discriminator, classifier, dataloader, ar
 
             # calculate metrics
             prox += calculate_proximity(imgs_1, imgs_1_cf)
+            if args.renorm is not None:
+                imgs_1_cf = args.renorm(imgs_1_cf)
             val += calculate_validity(classifier, imgs_1_cf, args.cls_2)
             cout_score, _ = calculate_cout(
                 imgs_1,
@@ -222,6 +225,7 @@ def calculate_cout(imgs, cfs, masks, model, cls_1, cls_2, step):
     with torch.no_grad():
         # The dimensions for the image
         img_size = imgs.shape[-1]
+        img_ch = imgs.shape[1]
         mask_size = masks.shape[-1]
 
         # Compute the total number of pixels in a mask
@@ -247,7 +251,7 @@ def calculate_cout(imgs, cfs, masks, model, cls_1, cls_2, step):
 
             # Set those indices to 1
             cur_mask[l, indices.permute(1, 0)] = 1
-            up_masks = up_sample(cur_mask.view(-1, 1, mask_size, mask_size))
+            up_masks = up_sample(cur_mask.view(-1, img_ch, mask_size, mask_size))
 
             # perturb the image using cur mask and calculate scores
             perturbed = phi(cfs, imgs, up_masks)
